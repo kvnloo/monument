@@ -23,13 +23,30 @@
             font-family: monospace;
             font-size: 12px;
         }
+        #controls {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 12px;
+        }
     </style>
 </head>
 <body>
     <div id="info">
-        <strong>Penrose Triangle Test</strong><br>
-        Camera: (20, 20, 20) orthographic<br>
-        <span id="status">Rendering...</span>
+        <strong>Penrose Triangle - Impossible Geometry</strong><br>
+        Three perpendicular beams that appear to form<br>
+        a closed triangle from this viewing angle.<br>
+        The illusion breaks when rotated!<br><br>
+        <span id="status">Ready</span>
+    </div>
+    <div id="controls">
+        <strong>Controls:</strong><br>
+        SPACE - Toggle rotation (reveals the trick!)<br>
+        R - Reset to illusion view
     </div>
 
     <script type="importmap">
@@ -62,73 +79,107 @@
         document.body.appendChild(renderer.domElement);
 
         // ========================================
-        // PENROSE TRIANGLE - ITERATION 3 (PROPER MATH)
-        // Key: Position beams BETWEEN vertices, not AT vertices
+        // PENROSE TRIANGLE - PROPER CONSTRUCTION
+        // Based on research from working Three.js implementations
+        // Three perpendicular beams with strategic positioning
         // ========================================
-        
-        const sideLength = 10;
-        const beamWidth = 1.5;
-        const beamDepth = 1.5;
-        
-        // Calculate vertices of equilateral triangle
-        const h = sideLength * Math.sqrt(3) / 2; // Height from center to edge
-        const vertices = [
-            { x: 0,              z: h * 2/3 },           // Top vertex
-            { x: sideLength/2,   z: -h/3 },              // Bottom-right vertex
-            { x: -sideLength/2,  z: -h/3 }               // Bottom-left vertex
-        ];
-        
+
+        const origin = { x: 3.5, y: 0, z: 0 };
         const colors = [0xE89B7B, 0x4A7A8C, 0x8B9A8E];
+
         const penroseGroup = new THREE.Group();
         scene.add(penroseGroup);
-        
-        // Create three beams, each connecting two vertices
-        for (let i = 0; i < 3; i++) {
-            const v1 = vertices[i];
-            const v2 = vertices[(i + 1) % 3];
-            
-            // Calculate beam center position (midpoint between vertices)
-            const centerX = (v1.x + v2.x) / 2;
-            const centerZ = (v1.z + v2.z) / 2;
-            
-            // Calculate rotation to align beam from v1 to v2
-            const dx = v2.x - v1.x;
-            const dz = v2.z - v1.z;
-            const angle = Math.atan2(dx, dz);
-            
-            // Create beam
-            const beamGeometry = new THREE.BoxGeometry(beamWidth, beamWidth, sideLength);
-            const beam = new THREE.Mesh(
-                beamGeometry,
-                new THREE.MeshBasicMaterial({ color: colors[i] })
+
+        // Helper function to create and position a beam
+        function createBeam(dimensions, offset, color) {
+            const geometry = new THREE.BoxGeometry(dimensions.width, dimensions.height, dimensions.depth);
+            const material = new THREE.MeshBasicMaterial({
+                color: color,
+                side: THREE.DoubleSide
+            });
+            const beam = new THREE.Mesh(geometry, material);
+
+            // Position beam
+            beam.position.set(
+                origin.x + offset.x,
+                origin.y + offset.y,
+                origin.z + offset.z
             );
-            
-            // Position at midpoint
-            beam.position.set(centerX, i * 2.5, centerZ); // Each beam at different height!
-            
-            // Rotate to connect vertices
-            beam.rotation.y = angle;
-            
-            // Add black edges
-            const edges = new THREE.EdgesGeometry(beamGeometry);
+
+            // Add black edges for better definition
+            const edges = new THREE.EdgesGeometry(geometry);
             const edgeLine = new THREE.LineSegments(
                 edges,
                 new THREE.LineBasicMaterial({ color: 0x000000 })
             );
             beam.add(edgeLine);
-            
-            penroseGroup.add(beam);
+
+            return beam;
         }
-        
-        // Apply isometric tilt
-        penroseGroup.rotation.x = Math.atan(1 / Math.sqrt(2)); // ~35.26°
-        
+
+        // Create the three beams that form the Penrose triangle
+        // Each beam is perpendicular to the others and positioned strategically
+
+        // Beam 1: Vertical beam (along Z-axis)
+        const beam1 = createBeam(
+            { width: 1, height: 1, depth: 16 },
+            { x: 0, y: 0, z: 0 },
+            colors[0]
+        );
+        penroseGroup.add(beam1);
+
+        // Beam 2: Horizontal beam left (along Y-axis)
+        const beam2 = createBeam(
+            { width: 1, height: 14, depth: 1 },
+            { x: 0, y: 7.5, z: 7.5 },
+            colors[1]
+        );
+        penroseGroup.add(beam2);
+
+        // Beam 3: Horizontal beam right (along X-axis)
+        const beam3 = createBeam(
+            { width: 16, height: 1, depth: 1 },
+            { x: -7.5, y: 0, z: -7.5 },
+            colors[2]
+        );
+        penroseGroup.add(beam3);
+
+        // Apply rotation to view from the critical angle where the illusion works
+        // From this angle, the three beams appear to form an impossible triangle
+        penroseGroup.rotation.x = Math.PI / 6;  // 30 degrees
+        penroseGroup.rotation.y = -Math.PI / 4; // -45 degrees
+
         // Center the group
-        penroseGroup.position.y = -2;
+        penroseGroup.position.set(-3, 0, 0);
+
+        // Optional: Add rotation to reveal the illusion
+        let autoRotate = false;
+        let rotationSpeed = 0.005;
+
+        // Keyboard controls
+        document.addEventListener('keydown', (event) => {
+            if (event.key === ' ') {
+                autoRotate = !autoRotate;
+                document.getElementById('status').textContent =
+                    autoRotate ? 'Rotating (press SPACE to stop)' : 'Stopped (press SPACE to rotate)';
+            }
+            if (event.key === 'r' || event.key === 'R') {
+                // Reset to illusion view
+                penroseGroup.rotation.x = Math.PI / 6;  // 30 degrees
+                penroseGroup.rotation.y = -Math.PI / 4; // -45 degrees
+                autoRotate = false;
+                document.getElementById('status').textContent = 'Reset to illusion view';
+            }
+        });
 
         // Animation
         function animate() {
             requestAnimationFrame(animate);
+
+            if (autoRotate) {
+                penroseGroup.rotation.y += rotationSpeed;
+            }
+
             renderer.render(scene, camera);
         }
         animate();
@@ -142,7 +193,7 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
 
-        document.getElementById('status').textContent = 'Ready!';
+        document.getElementById('status').textContent = 'Ready! Press SPACE to rotate';
     </script>
 </body>
 </html>
