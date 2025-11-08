@@ -37,10 +37,10 @@
 </head>
 <body>
     <div id="info">
-        <strong>Milestone 2: Click Detection</strong><br>
-        Click on the triangle to test raycasting.<br>
-        Check the console for click coordinates.<br><br>
-        <span id="status">Ready - Click on triangle!</span>
+        <strong>Milestone 3: Character Placement</strong><br>
+        White cone character now sits on the triangle.<br>
+        Click to test raycasting still works!<br><br>
+        <span id="status">Character placed on triangle</span>
     </div>
     <div id="controls">
         <strong>Controls:</strong><br>
@@ -171,6 +171,32 @@
 
         // Center and position for best view from camera at (20,20,20)
         penroseGroup.position.set(-2, -2, -2);
+
+        // ========================================
+        // MILESTONE 3: CHARACTER PLACEMENT
+        // Simple character that sits on the triangle surface
+        // ========================================
+
+        // Create character geometry (cone for Monument Valley style)
+        const characterGeometry = new THREE.ConeGeometry(0.3, 0.8, 8);
+        const characterMaterial = new THREE.MeshBasicMaterial({
+            color: 0xFFFFFF  // White character for contrast
+        });
+        const character = new THREE.Mesh(characterGeometry, characterMaterial);
+
+        // Add black edges to character
+        const characterEdges = new THREE.LineSegments(
+            new THREE.EdgesGeometry(characterGeometry),
+            new THREE.LineBasicMaterial({ color: 0x000000 })
+        );
+        character.add(characterEdges);
+
+        // Position character on the bottom bar of the triangle
+        // Accounting for the penroseGroup offset (-2, -2, -2)
+        // Bottom bar is at (0, 0, 0) in local space, so in world space it's (-2, -2, -2)
+        character.position.set(-2, -1.6, -2);  // Y offset accounts for cone height (0.8/2)
+
+        scene.add(character);
 
         // ========================================
         // MILESTONE 2: CLICK DETECTION
