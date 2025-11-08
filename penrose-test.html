@@ -38,8 +38,8 @@
 <body>
     <div id="info">
         <strong>Milestone 3: Character Placement</strong><br>
-        White cone character now sits on the triangle.<br>
-        Click to test raycasting still works!<br><br>
+        Princess Ida-inspired character with dress,<br>
+        head, and pointy hat (Monument Valley style)<br><br>
         <span id="status">Character placed on triangle</span>
     </div>
     <div id="controls">
@@ -173,28 +173,51 @@
         penroseGroup.position.set(-2, -2, -2);
 
         // ========================================
-        // MILESTONE 3: CHARACTER PLACEMENT
-        // Simple character that sits on the triangle surface
+        // MILESTONE 3: CHARACTER PLACEMENT (Princess Ida inspired)
+        // Monument Valley style character with dress, head, and pointy hat
         // ========================================
 
-        // Create character geometry (cone for Monument Valley style)
-        const characterGeometry = new THREE.ConeGeometry(0.5, 1.2, 8);  // Increased size
-        const characterMaterial = new THREE.MeshBasicMaterial({
-            color: 0xFFFFFF  // White character for contrast
-        });
-        const character = new THREE.Mesh(characterGeometry, characterMaterial);
+        const character = new THREE.Group();
 
-        // Add black edges to character
-        const characterEdges = new THREE.LineSegments(
-            new THREE.EdgesGeometry(characterGeometry),
+        // White material for all parts
+        const whiteMaterial = new THREE.MeshBasicMaterial({ color: 0xFFFFFF });
+
+        // 1. Dress/Body - cone shape (largest part)
+        const dressGeometry = new THREE.ConeGeometry(0.4, 0.9, 8);
+        const dress = new THREE.Mesh(dressGeometry, whiteMaterial);
+        dress.position.y = 0.45; // Half of dress height
+        const dressEdges = new THREE.LineSegments(
+            new THREE.EdgesGeometry(dressGeometry),
             new THREE.LineBasicMaterial({ color: 0x000000 })
         );
-        character.add(characterEdges);
+        dress.add(dressEdges);
+        character.add(dress);
+
+        // 2. Head - small cylinder
+        const headGeometry = new THREE.CylinderGeometry(0.2, 0.2, 0.3, 8);
+        const head = new THREE.Mesh(headGeometry, whiteMaterial);
+        head.position.y = 1.05; // On top of dress (0.9 + 0.15)
+        const headEdges = new THREE.LineSegments(
+            new THREE.EdgesGeometry(headGeometry),
+            new THREE.LineBasicMaterial({ color: 0x000000 })
+        );
+        head.add(headEdges);
+        character.add(head);
+
+        // 3. Pointy Hat - small cone on top
+        const hatGeometry = new THREE.ConeGeometry(0.25, 0.5, 8);
+        const hat = new THREE.Mesh(hatGeometry, whiteMaterial);
+        hat.position.y = 1.45; // On top of head (1.05 + 0.15 + 0.25)
+        const hatEdges = new THREE.LineSegments(
+            new THREE.EdgesGeometry(hatGeometry),
+            new THREE.LineBasicMaterial({ color: 0x000000 })
+        );
+        hat.add(hatEdges);
+        character.add(hat);
 
         // Position character on the bottom bar of the triangle
         // Accounting for the penroseGroup offset (-2, -2, -2)
-        // Bottom bar is at (0, 0, 0) in local space, so in world space it's (-2, -2, -2)
-        character.position.set(-2, -1.4, -2);  // Y offset accounts for cone height (1.2/2)
+        character.position.set(-2, -2, -2);
 
         scene.add(character);
 
