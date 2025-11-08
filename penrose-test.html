@@ -66,7 +66,7 @@
 
         // Orthographic camera (isometric view)
         const aspect = window.innerWidth / window.innerHeight;
-        const d = 20;
+        const d = 12;  // Reduced from 20 to zoom in closer
         const camera = new THREE.OrthographicCamera(
             -d * aspect, d * aspect, d, -d, 1, 1000
         );
@@ -178,7 +178,7 @@
         // ========================================
 
         // Create character geometry (cone for Monument Valley style)
-        const characterGeometry = new THREE.ConeGeometry(0.3, 0.8, 8);
+        const characterGeometry = new THREE.ConeGeometry(0.5, 1.2, 8);  // Increased size
         const characterMaterial = new THREE.MeshBasicMaterial({
             color: 0xFFFFFF  // White character for contrast
         });
@@ -194,7 +194,7 @@
         // Position character on the bottom bar of the triangle
         // Accounting for the penroseGroup offset (-2, -2, -2)
         // Bottom bar is at (0, 0, 0) in local space, so in world space it's (-2, -2, -2)
-        character.position.set(-2, -1.6, -2);  // Y offset accounts for cone height (0.8/2)
+        character.position.set(-2, -1.4, -2);  // Y offset accounts for cone height (1.2/2)
 
         scene.add(character);
 
