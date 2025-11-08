@@ -79,78 +79,98 @@
         document.body.appendChild(renderer.domElement);
 
         // ========================================
-        // PENROSE TRIANGLE - PROPER CONSTRUCTION
-        // Based on research from working Three.js implementations
-        // Three perpendicular beams with strategic positioning
+        // PENROSE TRIANGLE - WORKING CONSTRUCTION
+        // Based on proven CodePen implementation (zachgoldstein)
+        // Five strategically positioned boxes create the impossible triangle
+        // Adapted to work with camera at (20, 20, 20)
         // ========================================
 
-        const origin = { x: 3.5, y: 0, z: 0 };
         const colors = [0xE89B7B, 0x4A7A8C, 0x8B9A8E];
-
         const penroseGroup = new THREE.Group();
+
+        // Scale factor to fit our camera view (20,20,20 vs 500,500,500)
+        const scale = 0.02;
+
+        // Bottom horizontal bar (base of triangle)
+        const bottomGeometry = new THREE.BoxGeometry(1, 1, 6);
+        const bottomMesh = new THREE.Mesh(
+            bottomGeometry,
+            new THREE.MeshBasicMaterial({ color: colors[0] })
+        );
+        const bottomEdges = new THREE.LineSegments(
+            new THREE.EdgesGeometry(bottomGeometry),
+            new THREE.LineBasicMaterial({ color: 0x000000 })
+        );
+        bottomMesh.add(bottomEdges);
+        penroseGroup.add(bottomMesh);
+
+        // Vertical bar going up
+        const upGeometry = new THREE.BoxGeometry(1, 6, 1);
+        const upMesh = new THREE.Mesh(
+            upGeometry,
+            new THREE.MeshBasicMaterial({ color: colors[1] })
+        );
+        upMesh.position.set(0, 2.5, 2.5);
+        const upEdges = new THREE.LineSegments(
+            new THREE.EdgesGeometry(upGeometry),
+            new THREE.LineBasicMaterial({ color: 0x000000 })
+        );
+        upMesh.add(upEdges);
+        penroseGroup.add(upMesh);
+
+        // Top horizontal bar
+        const topGeometry = new THREE.BoxGeometry(3, 1, 1);
+        const topMesh = new THREE.Mesh(
+            topGeometry,
+            new THREE.MeshBasicMaterial({ color: colors[2] })
+        );
+        topMesh.position.set(2, 5, 2.5);
+        const topEdges = new THREE.LineSegments(
+            new THREE.EdgesGeometry(topGeometry),
+            new THREE.LineBasicMaterial({ color: 0x000000 })
+        );
+        topMesh.add(topEdges);
+        penroseGroup.add(topMesh);
+
+        // Top plane (fills corner)
+        const topPlaneGeometry = new THREE.PlaneGeometry(1, 1);
+        const topPlaneMesh = new THREE.Mesh(
+            topPlaneGeometry,
+            new THREE.MeshBasicMaterial({
+                color: colors[2],
+                side: THREE.DoubleSide
+            })
+        );
+        topPlaneMesh.position.set(4, 5.5, 2.5);
+        topPlaneMesh.rotation.x = Math.PI / -2;
+        penroseGroup.add(topPlaneMesh);
+
+        // Triangle piece (creates the impossible corner)
+        const topTriGeometry = new THREE.BufferGeometry();
+        const vertices = new Float32Array([
+            0, 0, 0,
+            1, 0, 0,
+            1, 1, 0
+        ]);
+        topTriGeometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+        topTriGeometry.setIndex([0, 1, 2]);
+        topTriGeometry.computeVertexNormals();
+
+        const topTriMesh = new THREE.Mesh(
+            topTriGeometry,
+            new THREE.MeshBasicMaterial({
+                color: colors[0],
+                side: THREE.DoubleSide
+            })
+        );
+        topTriMesh.position.set(4.5, 5.5, 3);
+        topTriMesh.rotation.z = Math.PI;
+        penroseGroup.add(topTriMesh);
+
         scene.add(penroseGroup);
 
-        // Helper function to create and position a beam
-        function createBeam(dimensions, offset, color) {
-            const geometry = new THREE.BoxGeometry(dimensions.width, dimensions.height, dimensions.depth);
-            const material = new THREE.MeshBasicMaterial({
-                color: color,
-                side: THREE.DoubleSide
-            });
-            const beam = new THREE.Mesh(geometry, material);
-
-            // Position beam
-            beam.position.set(
-                origin.x + offset.x,
-                origin.y + offset.y,
-                origin.z + offset.z
-            );
-
-            // Add black edges for better definition
-            const edges = new THREE.EdgesGeometry(geometry);
-            const edgeLine = new THREE.LineSegments(
-                edges,
-                new THREE.LineBasicMaterial({ color: 0x000000 })
-            );
-            beam.add(edgeLine);
-
-            return beam;
-        }
-
-        // Create the three beams that form the Penrose triangle
-        // Each beam is perpendicular to the others and positioned strategically
-
-        // Beam 1: Vertical beam (along Z-axis)
-        const beam1 = createBeam(
-            { width: 1, height: 1, depth: 16 },
-            { x: 0, y: 0, z: 0 },
-            colors[0]
-        );
-        penroseGroup.add(beam1);
-
-        // Beam 2: Horizontal beam left (along Y-axis)
-        const beam2 = createBeam(
-            { width: 1, height: 14, depth: 1 },
-            { x: 0, y: 7.5, z: 7.5 },
-            colors[1]
-        );
-        penroseGroup.add(beam2);
-
-        // Beam 3: Horizontal beam right (along X-axis)
-        const beam3 = createBeam(
-            { width: 16, height: 1, depth: 1 },
-            { x: -7.5, y: 0, z: -7.5 },
-            colors[2]
-        );
-        penroseGroup.add(beam3);
-
-        // Apply rotation to view from the critical angle where the illusion works
-        // From this angle, the three beams appear to form an impossible triangle
-        penroseGroup.rotation.x = Math.PI / 6;  // 30 degrees
-        penroseGroup.rotation.y = -Math.PI / 4; // -45 degrees
-
-        // Center the group
-        penroseGroup.position.set(-3, 0, 0);
+        // Center and position for best view from camera at (20,20,20)
+        penroseGroup.position.set(-2, -2, -2);
 
         // Optional: Add rotation to reveal the illusion
         let autoRotate = false;
@@ -165,8 +185,9 @@
             }
             if (event.key === 'r' || event.key === 'R') {
                 // Reset to illusion view
-                penroseGroup.rotation.x = Math.PI / 6;  // 30 degrees
-                penroseGroup.rotation.y = -Math.PI / 4; // -45 degrees
+                penroseGroup.rotation.x = 0;
+                penroseGroup.rotation.y = 0;
+                penroseGroup.rotation.z = 0;
                 autoRotate = false;
                 document.getElementById('status').textContent = 'Reset to illusion view';
             }
