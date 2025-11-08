@@ -37,16 +37,16 @@
 </head>
 <body>
     <div id="info">
-        <strong>Penrose Triangle - Impossible Geometry</strong><br>
-        Three perpendicular beams that appear to form<br>
-        a closed triangle from this viewing angle.<br>
-        The illusion breaks when rotated!<br><br>
-        <span id="status">Ready</span>
+        <strong>Milestone 2: Click Detection</strong><br>
+        Click on the triangle to test raycasting.<br>
+        Check the console for click coordinates.<br><br>
+        <span id="status">Ready - Click on triangle!</span>
     </div>
     <div id="controls">
         <strong>Controls:</strong><br>
-        SPACE - Toggle rotation (reveals the trick!)<br>
-        R - Reset to illusion view
+        LEFT CLICK - Test click detection<br>
+        SPACE - Toggle rotation<br>
+        R - Reset view
     </div>
 
     <script type="importmap">
@@ -171,6 +171,44 @@
 
         // Center and position for best view from camera at (20,20,20)
         penroseGroup.position.set(-2, -2, -2);
+
+        // ========================================
+        // MILESTONE 2: CLICK DETECTION
+        // Raycasting setup for orthographic camera (guide.md lines 64-88)
+        // ========================================
+
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+
+        // Track all walkable surfaces (for Milestone 2, all triangle surfaces are walkable)
+        const walkableObjects = [bottomMesh, upMesh, topMesh, topPlaneMesh, topTriMesh];
+
+        // Click handler
+        function onDocumentMouseDown(event) {
+            // Normalize mouse coordinates to -1 to +1 range
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            // Raycaster automatically handles orthographic camera
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(walkableObjects);
+
+            if (intersects.length > 0) {
+                const clickPoint = intersects[0].point;
+                console.log('✅ Clicked on triangle at:', {
+                    x: clickPoint.x.toFixed(2),
+                    y: clickPoint.y.toFixed(2),
+                    z: clickPoint.z.toFixed(2)
+                });
+                document.getElementById('status').textContent =
+                    `Clicked at (${clickPoint.x.toFixed(1)}, ${clickPoint.y.toFixed(1)}, ${clickPoint.z.toFixed(1)})`;
+            } else {
+                console.log('❌ Clicked empty space');
+                document.getElementById('status').textContent = 'Clicked empty space';
+            }
+        }
+
+        document.addEventListener('mousedown', onDocumentMouseDown);
 
         // Optional: Add rotation to reveal the illusion
         let autoRotate = false;
