@@ -37,10 +37,10 @@
 </head>
 <body>
     <div id="info">
-        <strong>Milestone 3: Improved Character Design</strong><br>
-        Princess Ida with better proportions:<br>
-        dress, neck, spherical head, hat, and feet<br><br>
-        <span id="status">Character placed on triangle</span>
+        <strong>Milestone 4: Click-to-Move</strong><br>
+        Click on the triangle to move the character!<br>
+        Character will walk smoothly to clicked position.<br><br>
+        <span id="status">Click on triangle to move character</span>
     </div>
     <div id="controls">
         <strong>Controls:</strong><br>
@@ -191,17 +191,16 @@
         scene.add(character);
 
         // ========================================
-        // MILESTONE 2: CLICK DETECTION
-        // Raycasting setup for orthographic camera (guide.md lines 64-88)
+        // MILESTONE 4: CLICK-TO-MOVE
+        // Character moves smoothly to clicked position
         // ========================================
 
-        const raycaster = new THREE.Raycaster();
-        const mouse = new THREE.Vector2();
+        // Movement state
+        let targetPosition = null;
+        let isMoving = false;
+        const moveSpeed = 0.05; // Units per frame
 
-        // Track all walkable surfaces (for Milestone 2, all triangle surfaces are walkable)
-        const walkableObjects = [bottomMesh, upMesh, topMesh, topPlaneMesh, topTriMesh];
-
-        // Click handler
+        // Click handler - updated for Milestone 4
         function onDocumentMouseDown(event) {
             // Normalize mouse coordinates to -1 to +1 range
             mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
@@ -213,20 +212,64 @@
 
             if (intersects.length > 0) {
                 const clickPoint = intersects[0].point;
-                console.log('✅ Clicked on triangle at:', {
+
+                // Set new target position for character
+                targetPosition = clickPoint.clone();
+                // Keep character on surface (same Y as click)
+                targetPosition.y = clickPoint.y;
+                isMoving = true;
+
+                console.log('✅ Moving to:', {
                     x: clickPoint.x.toFixed(2),
                     y: clickPoint.y.toFixed(2),
                     z: clickPoint.z.toFixed(2)
                 });
                 document.getElementById('status').textContent =
-                    `Clicked at (${clickPoint.x.toFixed(1)}, ${clickPoint.y.toFixed(1)}, ${clickPoint.z.toFixed(1)})`;
+                    `Moving to (${clickPoint.x.toFixed(1)}, ${clickPoint.y.toFixed(1)}, ${clickPoint.z.toFixed(1)})`;
             } else {
                 console.log('❌ Clicked empty space');
                 document.getElementById('status').textContent = 'Clicked empty space';
             }
         }
 
-        document.addEventListener('mousedown', onDocumentMouseDown);
+        // Update character position smoothly
+        function updateCharacterMovement() {
+            if (!isMoving || !targetPosition) return;
+
+            const currentPos = character.position;
+            const direction = new THREE.Vector3()
+                .subVectors(targetPosition, currentPos);
+
+            const distance = direction.length();
+
+            // If close enough, snap to target and stop
+            if (distance < 0.1) {
+                character.position.copy(targetPosition);
+                isMoving = false;
+                targetPosition = null;
+                document.getElementById('status').textContent = 'Arrived!';
+                return;
+            }
+
+            // Move toward target
+            direction.normalize();
+            character.position.add(direction.multiplyScalar(moveSpeed));
+
+            // Optional: Rotate character to face movement direction
+            const angle = Math.atan2(direction.x, direction.z);
+            character.rotation.y = angle;
+        }
+
+        // ========================================
+        // MILESTONE 2: CLICK DETECTION & MILESTONE 4: CLICK-TO-MOVE
+        // Raycasting setup for orthographic camera (guide.md lines 64-88)
+        // ========================================
+
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+
+        // Track all walkable surfaces
+        const walkableObjects = [bottomMesh, upMesh, topMesh, topPlaneMesh, topTriMesh];
 
         // Optional: Add rotation to reveal the illusion
         let autoRotate = false;
@@ -249,9 +292,14 @@
             }
         });
 
-        // Animation
+        document.addEventListener('mousedown', onDocumentMouseDown);
+
+        // Animation loop
         function animate() {
             requestAnimationFrame(animate);
+
+            // Update character movement (Milestone 4)
+            updateCharacterMovement();
 
             if (autoRotate) {
                 penroseGroup.rotation.y += rotationSpeed;
