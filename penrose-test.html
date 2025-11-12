@@ -62,9 +62,13 @@
         import * as THREE from 'three';
         import { createCharacter } from 'character';
 
+        console.log('Script loaded, THREE:', THREE);
+        console.log('createCharacter:', createCharacter);
+
         // Scene setup
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0xE6D5C3);
+        console.log('Scene created:', scene);
 
         // Orthographic camera (isometric view)
         const aspect = window.innerWidth / window.innerHeight;
@@ -173,12 +177,14 @@
 
         // Center and position for best view from camera at (20,20,20)
         penroseGroup.position.set(-2, -2, -2);
+        console.log('Penrose triangle created and added to scene');
 
         // ========================================
         // MILESTONE 3: CHARACTER - Imported from character.js
         // ========================================
 
         const character = createCharacter();
+        console.log('Character created:', character);
 
         // Add subtle ambient light to show form better
         const charLight = new THREE.PointLight(0xffffff, 0.3, 10);
@@ -189,6 +195,7 @@
         character.position.set(-2, -2, -2);
 
         scene.add(character);
+        console.log('Character added to scene at position:', character.position);
 
         // ========================================
         // MILESTONE 4: CLICK-TO-MOVE
@@ -307,6 +314,7 @@
 
             renderer.render(scene, camera);
         }
+        console.log('Starting animation loop...');
         animate();
 
         // Window resize
