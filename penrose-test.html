@@ -197,6 +197,12 @@
         scene.add(character);
         console.log('Character added to scene at position:', character.position);
 
+        // Initial surface alignment (after adding to scene)
+        // Wait for next frame to ensure everything is set up
+        requestAnimationFrame(() => {
+            stickToSurface();
+        });
+
         // ========================================
         // MILESTONE 4: CLICK-TO-MOVE
         // Character moves smoothly to clicked position
@@ -206,6 +212,14 @@
         let targetPosition = null;
         let isMoving = false;
         const moveSpeed = 0.05; // Units per frame
+        let currentSurface = null; // Track which surface character is on
+        let walkingTime = 0; // For walk animation
+
+        // Reusable vectors for performance
+        const tempDirection = new THREE.Vector3();
+        const rayOrigin = new THREE.Vector3();
+        const rayDirection = new THREE.Vector3(0, -1, 0); // Down
+        const surfaceRaycaster = new THREE.Raycaster();
 
         // Click handler - updated for Milestone 4
         function onDocumentMouseDown(event) {
@@ -219,11 +233,10 @@
 
             if (intersects.length > 0) {
                 const clickPoint = intersects[0].point;
+                const clickedSurface = intersects[0].object;
 
                 // Set new target position for character
                 targetPosition = clickPoint.clone();
-                // Keep character on surface (same Y as click)
-                targetPosition.y = clickPoint.y;
                 isMoving = true;
 
                 console.log('✅ Moving to:', {
@@ -239,32 +252,86 @@
             }
         }
 
+        // Stick character to surface below them
+        function stickToSurface() {
+            // Cast ray downward from character position (slightly above)
+            rayOrigin.copy(character.position);
+            rayOrigin.y += 2; // Start ray above character
+
+            surfaceRaycaster.set(rayOrigin, rayDirection);
+            const hits = surfaceRaycaster.intersectObjects(walkableObjects);
+
+            if (hits.length > 0) {
+                const hit = hits[0];
+                currentSurface = hit.object;
+
+                // Position character on surface
+                character.position.y = hit.point.y;
+
+                // Get surface normal and align character to it
+                const surfaceNormal = hit.face.normal.clone();
+                // Transform normal from object space to world space
+                surfaceNormal.transformDirection(hit.object.matrixWorld);
+
+                // Align character's up direction to surface normal
+                // Use quaternion to smoothly rotate character
+                const upVector = new THREE.Vector3(0, 1, 0);
+                const quaternion = new THREE.Quaternion();
+                quaternion.setFromUnitVectors(upVector, surfaceNormal);
+
+                // Smoothly interpolate to new orientation (slerp for smooth rotation)
+                character.quaternion.slerp(quaternion, 0.1);
+
+                return true;
+            }
+            return false;
+        }
+
         // Update character position smoothly
         function updateCharacterMovement() {
             if (!isMoving || !targetPosition) return;
 
-            const currentPos = character.position;
-            const direction = new THREE.Vector3()
-                .subVectors(targetPosition, currentPos);
+            tempDirection.subVectors(targetPosition, character.position);
+            // Only move in X-Z plane, Y will be set by surface raycast
+            tempDirection.y = 0;
 
-            const distance = direction.length();
+            const distance = tempDirection.length();
 
             // If close enough, snap to target and stop
             if (distance < 0.1) {
-                character.position.copy(targetPosition);
+                character.position.x = targetPosition.x;
+                character.position.z = targetPosition.z;
                 isMoving = false;
                 targetPosition = null;
+                walkingTime = 0;
                 document.getElementById('status').textContent = 'Arrived!';
                 return;
             }
 
             // Move toward target
-            direction.normalize();
-            character.position.add(direction.multiplyScalar(moveSpeed));
+            tempDirection.normalize();
+            character.position.x += tempDirection.x * moveSpeed;
+            character.position.z += tempDirection.z * moveSpeed;
 
-            // Optional: Rotate character to face movement direction
-            const angle = Math.atan2(direction.x, direction.z);
-            character.rotation.y = angle;
+            // Stick to surface below
+            stickToSurface();
+
+            // Rotate character to face movement direction (around surface normal)
+            const angle = Math.atan2(tempDirection.x, tempDirection.z);
+            // Apply rotation around Y-axis of character (which is now aligned to surface)
+            const targetRotation = new THREE.Euler(0, angle, 0);
+            const targetQuat = new THREE.Quaternion().setFromEuler(targetRotation);
+
+            // Combine surface alignment with forward direction
+            // This keeps character perpendicular to surface while facing forward
+            if (currentSurface) {
+                character.rotation.y = angle;
+            }
+
+            // Add simple walking animation (bobbing)
+            walkingTime += 0.15;
+            const bobAmount = Math.sin(walkingTime) * 0.05;
+            character.position.y += bobAmount;
         }
 
         // ========================================
