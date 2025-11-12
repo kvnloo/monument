@@ -254,9 +254,9 @@
 
         // Stick character to surface below them
         function stickToSurface() {
-            // Cast ray downward from character position (slightly above)
+            // Cast ray downward from character position (way above to ensure we catch it)
             rayOrigin.copy(character.position);
-            rayOrigin.y += 2; // Start ray above character
+            rayOrigin.y += 5; // Start ray well above character
 
             surfaceRaycaster.set(rayOrigin, rayDirection);
             const hits = surfaceRaycaster.intersectObjects(walkableObjects);
@@ -265,8 +265,11 @@
                 const hit = hits[0];
                 currentSurface = hit.object;
 
-                // Position character on surface
-                character.position.y = hit.point.y;
+                // Position character on surface (no walking bob here, add it after)
+                const targetY = hit.point.y;
+
+                // Smooth Y transition to avoid jumps
+                character.position.y += (targetY - character.position.y) * 0.3;
 
                 // Get surface normal and align character to it
                 const surfaceNormal = hit.face.normal.clone();
@@ -279,8 +282,8 @@
                 const quaternion = new THREE.Quaternion();
                 quaternion.setFromUnitVectors(upVector, surfaceNormal);
 
-                // Smoothly interpolate to new orientation (slerp for smooth rotation)
-                character.quaternion.slerp(quaternion, 0.1);
+                // VERY smoothly interpolate to new orientation (slower slerp)
+                character.quaternion.slerp(quaternion, 0.05);
 
                 return true;
             }
@@ -313,25 +316,21 @@
             character.position.x += tempDirection.x * moveSpeed;
             character.position.z += tempDirection.z * moveSpeed;
 
-            // Stick to surface below
-            stickToSurface();
+            // Stick to surface below FIRST
+            const onSurface = stickToSurface();
 
-            // Rotate character to face movement direction (around surface normal)
-            const angle = Math.atan2(tempDirection.x, tempDirection.z);
-            // Apply rotation around Y-axis of character (which is now aligned to surface)
-            const targetRotation = new THREE.Euler(0, angle, 0);
-            const targetQuat = new THREE.Quaternion().setFromEuler(targetRotation);
-
-            // Combine surface alignment with forward direction
-            // This keeps character perpendicular to surface while facing forward
-            if (currentSurface) {
-                character.rotation.y = angle;
+            // Add simple walking animation (bobbing) AFTER surface stick
+            // Only bob if we're actually on a surface
+            if (onSurface) {
+                walkingTime += 0.15;
+                const bobAmount = Math.sin(walkingTime) * 0.03; // Reduced amplitude
+                character.position.y += bobAmount;
             }
 
-            // Add simple walking animation (bobbing)
-            walkingTime += 0.15;
-            const bobAmount = Math.sin(walkingTime) * 0.05;
-            character.position.y += bobAmount;
+            // Rotate character to face movement direction
+            // Keep this simple for now - just Y rotation
+            const angle = Math.atan2(tempDirection.x, tempDirection.z);
+            character.rotation.y = angle;
         }
 
         // ========================================
