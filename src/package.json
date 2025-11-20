@@ -1,8 +1,23 @@
 {
   "name": "monument-valley-demo",
-  "private": true,
   "version": "0.0.0",
   "type": "module",
+  "description": "Monument Valley tribute - Isometric impossible geometry puzzle game demo",
+  "keywords": [
+    "three.js",
+    "react",
+    "isometric",
+    "monument-valley",
+    "impossible-geometry",
+    "puzzle-game"
+  ],
+  "author": "Kevin Loo",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kvnloo/monument.git"
+  },
+  "private": true,
   "scripts": {
     "dev": "vite",
     "build": "vite build",

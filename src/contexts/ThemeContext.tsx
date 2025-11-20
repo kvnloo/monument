@@ -1,5 +1,5 @@
 import React, { createContext, useContext, ReactNode } from 'react';
-import { LevelTheme } from '../themes/types';
+import { LevelTheme } from '../types';
 import { getTheme } from '../themes/levelThemes';
 
 interface ThemeContextType {

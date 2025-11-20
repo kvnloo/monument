@@ -1,0 +1,214 @@
+================================================================================
+TEST SUITE EXECUTION SUMMARY
+Monument Valley Demo - Quality Engineering Report
+Generated: November 20, 2025
+================================================================================
+
+OVERALL STATUS: REGRESSION DETECTED - 7 CRITICAL FAILURES
+
+================================================================================
+QUICK FACTS
+================================================================================
+
+Test Framework:        Vitest 4.0.10
+Test Command:         npm run test:run (executed in src/ directory)
+Total Tests:          29
+Tests Passed:         22 (75.9%)
+Tests Failed:         7 (24.1%)
+Execution Time:       204ms
+
+Test File:            src/utils/__tests__/isometricAlignment.test.ts
+Lines of Code:        500+
+Test Suites:          1
+Suite Status:         FAILED
+
+================================================================================
+FAILURE SUMMARY
+================================================================================
+
+ISSUE: Isometric Alignment Algorithm Not Converging Correctly
+
+All 7 failures stem from the same root cause:
+  - Algorithm returns geometric midpoint (Y=9.19)
+  - Expected to return visual midpoint (Y=8.23)
+  - Difference: 0.96 units
+  - Impact: Water animations will be visually misaligned
+
+Failure Breakdown:
+  - Primary validation:     3 failures (Y calculation, correction, difference)
+  - Diagnostic analysis:    1 failure (analysis reports wrong value)
+  - Alignment validation:   1 failure (wrongly reports alignment)
+  - Comparison analysis:    2 failures (missing visual correction)
+
+================================================================================
+TEST RESULTS BY CATEGORY
+================================================================================
+
+PASSING TESTS (22/29):
+  ✓ Diagnostic Analysis (1 test)
+  ✓ Screen Space Projection (3 tests)
+  ✓ Edge Cases - Vertical/Horizontal (6 tests)
+  ✓ Convergence Behavior (4 tests)
+  ✓ Geometric vs Visual Comparison (2 tests)
+  ✓ Alignment Validation (6 tests)
+
+FAILING TESTS (7/29):
+  ✗ Water-Spout Y Calculation (Line 78)
+  ✗ Geometric Correction Validation (Line 86)
+  ✗ Y-Difference Validation (Line 103)
+  ✗ Diagnostic Analysis (Line 147)
+  ✗ Visual Alignment Check (Line 321)
+  ✗ Geometric vs Visual Comparison (Line 393)
+  ✗ Validation Summary (Line 437)
+
+================================================================================
+ROOT CAUSE ANALYSIS
+================================================================================
+
+PROBLEM IDENTIFIED:
+  Algorithm converges after 1 iteration to geometric midpoint instead of
+  continuing binary search to visual correction point.
+
+WHY IT HAPPENS:
+  The geometric midpoint (Y=9.19) already projects to the target screen
+  position, satisfying the convergence criterion (|error| < 0.001).
+  This causes the algorithm to return immediately without correction.
+
+EVIDENCE:
+  Test diagnostics show:
+  - Geometric midpoint: Y=9.19, screen Y=0.1738
+  - Visual midpoint:    Y=8.23, screen Y=0.1738 (same!)
+  - Both project to identical screen location
+  - Algorithm can't distinguish between them
+
+HYPOTHESIS:
+  The camera setup or coordinate system in the test environment differs
+  from the production environment where Y=8.23 was originally measured.
+
+================================================================================
+IMPACT ASSESSMENT
+================================================================================
+
+FUNCTIONAL IMPACT:
+  - Isometric alignment algorithm: NOT WORKING
+  - Water animation positioning: BROKEN
+  - User-visible visual fidelity: COMPROMISED
+  - Critical geometry calculations: UNRELIABLE
+
+CODE QUALITY IMPACT:
+  - Regression detection: WORKING (tests properly identify issue)
+  - Algorithm correctness: FAILED
+  - Validation gates: BROKEN
+  - Test coverage: UNABLE TO MEASURE (tool not installed)
+
+SEVERITY: CRITICAL
+Cannot release without fixing this regression.
+
+================================================================================
+NEXT STEPS
+================================================================================
+
+IMMEDIATE ACTIONS (Required for Release):
+
+1. Fix Algorithm Logic (2-3 hours)
+   - Review calculateVisualMidpoint() implementation
+   - Check binary search termination condition
+   - Verify convergence criteria calculation
+   - Debug step-by-step with test case
+
+2. Validate Camera Setup (1-2 hours)
+   - Verify test camera matches production
+   - Check isometric angle (35.264°)
+   - Confirm camera position (20, 20, 20)
+   - Validate frustum size and aspect ratio
+
+3. Re-run Tests (30 minutes)
+   - Confirm fixes resolve all 7 failures
+   - Verify pass rate reaches 100%
+   - Check iteration counts are reasonable
+
+OPTIONAL IMPROVEMENTS:
+
+1. Install Coverage Tool
+   npm install --save-dev @vitest/coverage-v8
+
+2. Add Integration Tests
+   - Test with actual scene rendering
+   - Validate camera positioning
+   - Test with different angles
+
+3. Document Algorithm
+   - Add detailed comments
+   - Create architecture guide
+   - Document expected vs actual behavior
+
+================================================================================
+TEST EXECUTION DETAILS
+================================================================================
+
+Command Executed:
+  $ cd /home/kvn/workspace/monument/src
+  $ npm run test:run
+
+Test Configuration:
+  - Camera Type: OrthographicCamera
+  - Camera Position: (20, 20, 20)
+  - Frustum Size: 50
+  - Aspect Ratio: 1920/1080
+  - Look-at Target: (0, 0, 0)
+  - Up Vector: (0, 1, 0)
+
+Test Case - Water-Spout:
+  - Beam-A Endpoint: [2.40, 0.00, -13.00]
+  - Waterfall Top: [20.64, 18.38, 5.44]
+  - Expected Y: 8.23
+  - Actual Y: 9.19
+  - Error: 0.96 units
+
+Performance Metrics:
+  - Transform Phase: 48ms
+  - Setup Phase: 0ms
+  - Collection Phase: 97ms
+  - Test Execution: 19ms
+  - Total: 204ms
+
+================================================================================
+REPORTS GENERATED
+================================================================================
+
+1. TEST_RESULTS_REPORT.md
+   - Detailed test failure analysis
+   - Individual test case breakdowns
+   - Root cause investigation
+   - Impact assessment
+
+2. QUALITY_ASSESSMENT.md
+   - Comprehensive quality scorecard
+   - Issue severity ratings
+   - Risk assessment matrix
+   - Recommended actions with time estimates
+
+3. TEST_RESULTS_SUMMARY.txt
+   - This file
+   - Quick reference summary
+   - Next steps checklist
+
+================================================================================
+RECOMMENDATION
+================================================================================
+
+DO NOT RELEASE until these 7 test failures are resolved.
+
+The regression affects critical visual alignment logic used by water
+animations. Releasing with this issue will result in misaligned geometry
+that users will immediately notice.
+
+Priority: CRITICAL
+Owner: @kvn
+Estimate: 3-6 hours total to diagnose and fix
+
+================================================================================
+Generated: November 20, 2025
+Test Framework: Vitest 4.0.10
+Status: REGRESSION - CRITICAL - 7 FAILURES
+================================================================================

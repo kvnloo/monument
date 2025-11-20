@@ -1,4 +1,4 @@
-import { ResearchItem, ResearchCategory } from './types';
+import { ResearchItem, ResearchCategory } from './types/research';
 
 export const INITIAL_RESEARCH: ResearchItem[] = [
   {

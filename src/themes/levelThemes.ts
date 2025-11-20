@@ -1,4 +1,4 @@
-import { LevelTheme } from './types';
+import { LevelTheme } from '../types';
 
 export const LEVEL_THEMES: Record<string, LevelTheme> = {
   theGarden: {
