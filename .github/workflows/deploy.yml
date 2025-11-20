@@ -41,6 +41,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: main-branch/monument-valley-demo/package-lock.json
 
       - name: Build main branch
         run: |
