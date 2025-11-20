@@ -1,0 +1,5 @@
+{
+  "name": "Monumental Architect",
+  "description": "An AI-powered Game Design Workbench for architecting a Monument Valley clone. Features an interactive Game Design Document viewer and a prototype isometric 3D engine context.",
+  "requestFramePermissions": []
+}

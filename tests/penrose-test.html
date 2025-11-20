@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Penrose Triangle Test</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #E6D5C3;
+        }
+        canvas {
+            display: block;
+        }
+        #info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        #controls {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div id="info">
+        <strong>Milestone 4: Click-to-Move</strong><br>
+        Click on the triangle to move the character!<br>
+        Character will walk smoothly to clicked position.<br><br>
+        <span id="status">Click on triangle to move character</span>
+    </div>
+    <div id="controls">
+        <strong>Controls:</strong><br>
+        LEFT CLICK - Test click detection<br>
+        SPACE - Toggle rotation<br>
+        R - Reset view
+    </div>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+            "character": "./character.js"
+        }
+    }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { createCharacter } from 'character';
+
+        console.log('Script loaded, THREE:', THREE);
+        console.log('createCharacter:', createCharacter);
+
+        // Scene setup
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xE6D5C3);
+        console.log('Scene created:', scene);
+
+        // Orthographic camera (isometric view)
+        const aspect = window.innerWidth / window.innerHeight;
+        const d = 12;  // Reduced from 20 to zoom in closer
+        const camera = new THREE.OrthographicCamera(
+            -d * aspect, d * aspect, d, -d, 1, 1000
+        );
+        camera.position.set(20, 20, 20);
+        camera.lookAt(0, 0, 0);
+
+        // Renderer
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // ========================================
+        // PENROSE TRIANGLE - WORKING CONSTRUCTION
+        // Based on proven CodePen implementation (zachgoldstein)
+        // Five strategically positioned boxes create the impossible triangle
+        // Adapted to work with camera at (20, 20, 20)
+        // ========================================
+
+        const colors = [0xE89B7B, 0x4A7A8C, 0x8B9A8E];
+        const penroseGroup = new THREE.Group();
+
+        // Scale factor to fit our camera view (20,20,20 vs 500,500,500)
+        const scale = 0.02;
+
+        // Bottom horizontal bar (base of triangle)
+        const bottomGeometry = new THREE.BoxGeometry(1, 1, 6);
+        const bottomMesh = new THREE.Mesh(
+            bottomGeometry,
+            new THREE.MeshBasicMaterial({ color: colors[0] })
+        );
+        const bottomEdges = new THREE.LineSegments(
+            new THREE.EdgesGeometry(bottomGeometry),
+            new THREE.LineBasicMaterial({ color: 0x000000 })
+        );
+        bottomMesh.add(bottomEdges);
+        penroseGroup.add(bottomMesh);
+
+        // Vertical bar going up
+        const upGeometry = new THREE.BoxGeometry(1, 6, 1);
+        const upMesh = new THREE.Mesh(
+            upGeometry,
+            new THREE.MeshBasicMaterial({ color: colors[1] })
+        );
+        upMesh.position.set(0, 2.5, 2.5);
+        const upEdges = new THREE.LineSegments(
+            new THREE.EdgesGeometry(upGeometry),
+            new THREE.LineBasicMaterial({ color: 0x000000 })
+        );
+        upMesh.add(upEdges);
+        penroseGroup.add(upMesh);
+
+        // Top horizontal bar
+        const topGeometry = new THREE.BoxGeometry(3, 1, 1);
+        const topMesh = new THREE.Mesh(
+            topGeometry,
+            new THREE.MeshBasicMaterial({ color: colors[2] })
+        );
+        topMesh.position.set(2, 5, 2.5);
+        const topEdges = new THREE.LineSegments(
+            new THREE.EdgesGeometry(topGeometry),
+            new THREE.LineBasicMaterial({ color: 0x000000 })
+        );
+        topMesh.add(topEdges);
+        penroseGroup.add(topMesh);
+
+        // Top plane (fills corner)
+        const topPlaneGeometry = new THREE.PlaneGeometry(1, 1);
+        const topPlaneMesh = new THREE.Mesh(
+            topPlaneGeometry,
+            new THREE.MeshBasicMaterial({
+                color: colors[2],
+                side: THREE.DoubleSide
+            })
+        );
+        topPlaneMesh.position.set(4, 5.5, 2.5);
+        topPlaneMesh.rotation.x = Math.PI / -2;
+        penroseGroup.add(topPlaneMesh);
+
+        // Triangle piece (creates the impossible corner)
+        const topTriGeometry = new THREE.BufferGeometry();
+        const vertices = new Float32Array([
+            0, 0, 0,
+            1, 0, 0,
+            1, 1, 0
+        ]);
+        topTriGeometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+        topTriGeometry.setIndex([0, 1, 2]);
+        topTriGeometry.computeVertexNormals();
+
+        const topTriMesh = new THREE.Mesh(
+            topTriGeometry,
+            new THREE.MeshBasicMaterial({
+                color: colors[0],
+                side: THREE.DoubleSide
+            })
+        );
+        topTriMesh.position.set(4.5, 5.5, 3);
+        topTriMesh.rotation.z = Math.PI;
+        penroseGroup.add(topTriMesh);
+
+        scene.add(penroseGroup);
+
+        // Center and position for best view from camera at (20,20,20)
+        penroseGroup.position.set(-2, -2, -2);
+        console.log('Penrose triangle created and added to scene');
+
+        // ========================================
+        // MILESTONE 3: CHARACTER - Imported from character.js
+        // ========================================
+
+        const character = createCharacter();
+        console.log('Character created:', character);
+
+        // Add subtle ambient light to show form better
+        const charLight = new THREE.PointLight(0xffffff, 0.3, 10);
+        charLight.position.set(0, 3, 2);
+        scene.add(charLight);
+
+        // Position character on the bottom bar of the triangle
+        character.position.set(-2, -2, -2);
+
+        scene.add(character);
+        console.log('Character added to scene at position:', character.position);
+
+        // Initial surface alignment (after adding to scene)
+        // Wait for next frame to ensure everything is set up
+        requestAnimationFrame(() => {
+            stickToSurface();
+        });
+
+        // ========================================
+        // MILESTONE 4: CLICK-TO-MOVE
+        // Character moves smoothly to clicked position
+        // ========================================
+
+        // Movement state
+        let targetPosition = null;
+        let isMoving = false;
+        const moveSpeed = 0.05; // Units per frame
+        let currentSurface = null; // Track which surface character is on
+        let walkingTime = 0; // For walk animation
+
+        // Reusable vectors for performance
+        const tempDirection = new THREE.Vector3();
+        const rayOrigin = new THREE.Vector3();
+        const rayDirection = new THREE.Vector3(0, -1, 0); // Down
+        const surfaceRaycaster = new THREE.Raycaster();
+
+        // Click handler - updated for Milestone 4
+        function onDocumentMouseDown(event) {
+            // Normalize mouse coordinates to -1 to +1 range
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            // Raycaster automatically handles orthographic camera
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(walkableObjects);
+
+            if (intersects.length > 0) {
+                const clickPoint = intersects[0].point;
+                const clickedSurface = intersects[0].object;
+
+                // Set new target position for character
+                targetPosition = clickPoint.clone();
+                isMoving = true;
+
+                console.log('✅ Moving to:', {
+                    x: clickPoint.x.toFixed(2),
+                    y: clickPoint.y.toFixed(2),
+                    z: clickPoint.z.toFixed(2)
+                });
+                document.getElementById('status').textContent =
+                    `Moving to (${clickPoint.x.toFixed(1)}, ${clickPoint.y.toFixed(1)}, ${clickPoint.z.toFixed(1)})`;
+            } else {
+                console.log('❌ Clicked empty space');
+                document.getElementById('status').textContent = 'Clicked empty space';
+            }
+        }
+
+        // Stick character to surface below them
+        function stickToSurface() {
+            // Cast ray downward from character position (slightly above)
+            rayOrigin.copy(character.position);
+            rayOrigin.y += 2; // Start ray above character
+
+            surfaceRaycaster.set(rayOrigin, rayDirection);
+            const hits = surfaceRaycaster.intersectObjects(walkableObjects);
+
+            if (hits.length > 0) {
+                const hit = hits[0];
+                currentSurface = hit.object;
+
+                // Position character on surface
+                character.position.y = hit.point.y;
+
+                // Get surface normal and align character to it
+                const surfaceNormal = hit.face.normal.clone();
+                // Transform normal from object space to world space
+                surfaceNormal.transformDirection(hit.object.matrixWorld);
+
+                // Align character's up direction to surface normal
+                // Use quaternion to smoothly rotate character
+                const upVector = new THREE.Vector3(0, 1, 0);
+                const quaternion = new THREE.Quaternion();
+                quaternion.setFromUnitVectors(upVector, surfaceNormal);
+
+                // Smoothly interpolate to new orientation (slerp for smooth rotation)
+                character.quaternion.slerp(quaternion, 0.1);
+
+                return true;
+            }
+            return false;
+        }
+
+        // Update character position smoothly
+        function updateCharacterMovement() {
+            if (!isMoving || !targetPosition) return;
+
+            tempDirection.subVectors(targetPosition, character.position);
+            // Only move in X-Z plane, Y will be set by surface raycast
+            tempDirection.y = 0;
+
+            const distance = tempDirection.length();
+
+            // If close enough, snap to target and stop
+            if (distance < 0.1) {
+                character.position.x = targetPosition.x;
+                character.position.z = targetPosition.z;
+                isMoving = false;
+                targetPosition = null;
+                walkingTime = 0;
+                document.getElementById('status').textContent = 'Arrived!';
+                return;
+            }
+
+            // Move toward target
+            tempDirection.normalize();
+            character.position.x += tempDirection.x * moveSpeed;
+            character.position.z += tempDirection.z * moveSpeed;
+
+            // Stick to surface below
+            stickToSurface();
+
+            // Rotate character to face movement direction (around surface normal)
+            const angle = Math.atan2(tempDirection.x, tempDirection.z);
+            // Apply rotation around Y-axis of character (which is now aligned to surface)
+            const targetRotation = new THREE.Euler(0, angle, 0);
+            const targetQuat = new THREE.Quaternion().setFromEuler(targetRotation);
+
+            // Combine surface alignment with forward direction
+            // This keeps character perpendicular to surface while facing forward
+            if (currentSurface) {
+                character.rotation.y = angle;
+            }
+
+            // Add simple walking animation (bobbing)
+            walkingTime += 0.15;
+            const bobAmount = Math.sin(walkingTime) * 0.05;
+            character.position.y += bobAmount;
+        }
+
+        // ========================================
+        // MILESTONE 2: CLICK DETECTION & MILESTONE 4: CLICK-TO-MOVE
+        // Raycasting setup for orthographic camera (guide.md lines 64-88)
+        // ========================================
+
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+
+        // Track all walkable surfaces
+        const walkableObjects = [bottomMesh, upMesh, topMesh, topPlaneMesh, topTriMesh];
+
+        // Optional: Add rotation to reveal the illusion
+        let autoRotate = false;
+        let rotationSpeed = 0.005;
+
+        // Keyboard controls
+        document.addEventListener('keydown', (event) => {
+            if (event.key === ' ') {
+                autoRotate = !autoRotate;
+                document.getElementById('status').textContent =
+                    autoRotate ? 'Rotating (press SPACE to stop)' : 'Stopped (press SPACE to rotate)';
+            }
+            if (event.key === 'r' || event.key === 'R') {
+                // Reset to illusion view
+                penroseGroup.rotation.x = 0;
+                penroseGroup.rotation.y = 0;
+                penroseGroup.rotation.z = 0;
+                autoRotate = false;
+                document.getElementById('status').textContent = 'Reset to illusion view';
+            }
+        });
+
+        document.addEventListener('mousedown', onDocumentMouseDown);
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Update character movement (Milestone 4)
+            updateCharacterMovement();
+
+            if (autoRotate) {
+                penroseGroup.rotation.y += rotationSpeed;
+            }
+
+            renderer.render(scene, camera);
+        }
+        console.log('Starting animation loop...');
+        animate();
+
+        // Window resize
+        window.addEventListener('resize', () => {
+            const aspect = window.innerWidth / window.innerHeight;
+            camera.left = -d * aspect;
+            camera.right = d * aspect;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        document.getElementById('status').textContent = 'Ready! Press SPACE to rotate';
+    </script>
+</body>
+</html>
