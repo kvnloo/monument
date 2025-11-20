@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - dev
   workflow_dispatch:
 
 permissions:
@@ -19,25 +20,52 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout current branch
         uses: actions/checkout@v4
+        with:
+          path: current
+
+      - name: Checkout main branch
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: main-branch
+
+      - name: Checkout dev branch
+        uses: actions/checkout@v4
+        with:
+          ref: dev
+          path: dev-branch
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-          cache-dependency-path: monument-valley-demo/package-lock.json
+          cache-dependency-path: main-branch/monument-valley-demo/package-lock.json
 
-      - name: Install dependencies
+      - name: Build main branch
         run: |
-          cd monument-valley-demo
+          cd main-branch/monument-valley-demo
           npm ci
-
-      - name: Build
-        run: |
-          cd monument-valley-demo
           npm run build
+
+      - name: Build dev branch
+        run: |
+          cd dev-branch/monument-valley-demo
+          npm ci
+          # Update base path for dev subdirectory
+          sed -i "s|base: '/monument/'|base: '/monument/dev/'|g" vite.config.ts
+          npm run build
+
+      - name: Prepare combined deployment
+        run: |
+          mkdir -p deployment
+          # Copy main build to root
+          cp -r main-branch/monument-valley-demo/dist/* deployment/
+          # Copy dev build to /dev subdirectory
+          mkdir -p deployment/dev
+          cp -r dev-branch/monument-valley-demo/dist/* deployment/dev/
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
@@ -45,7 +73,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: monument-valley-demo/dist
+          path: deployment
 
   deploy:
     environment:

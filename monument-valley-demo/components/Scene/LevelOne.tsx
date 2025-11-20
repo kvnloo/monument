@@ -340,9 +340,8 @@ export const LevelOne: React.FC = () => {
         <WaterfallBlock height={14} />
       </MovableWrapper>
 
-      {/* Beam B: The Short Corner (X Axis) -> Flows to Negative X */}
-      {/* Previous was [1, 0]. Reversed to [-1, 0]. */}
-      <MovableWrapper 
+      {/* Beam B: The Short Corner (X Axis) -> Flows to Positive X */}
+      <MovableWrapper
         id="Beam-B"
         initialPos={[7.90, 5.50, 5.44]}
         isSelected={selectedIds.has('Beam-B')}
@@ -351,11 +350,11 @@ export const LevelOne: React.FC = () => {
       >
           <Path
             start={[0, 0, 0]}
-            length={16} 
+            length={16}
             axis="x"
-            color={PALETTE.brickDark} 
+            color={PALETTE.brickDark}
             type="water"
-            flowDirection={[-1, 0]} 
+            flowDirection={[1, 0]} 
             customBlocks={{
                 0: { walls: [true, false], endWalls: [true, false] }, 
                 15: { endWalls: [false, true] }
