@@ -363,7 +363,7 @@ export const WaterfallBlock: React.FC<BlockProps & { height?: number }> = ({
     }, [waterTexture, height]);
 
     useFrame((state, delta) => {
-        textureInstance.offset.y -= 1.5 * delta;
+        textureInstance.offset.y += 1.5 * delta;
     });
 
     return (
