@@ -5,6 +5,8 @@ import { PlannerPanel } from './components/Research/PlannerPanel';
 import { EnginePreview } from './components/Scene/EnginePreview';
 import { IntroScreen } from './components/UI/IntroScreen';
 import { LevelSelect } from './components/UI/LevelSelect';
+import { LevelOne } from './components/Scene/LevelOne';
+import { ThemeProvider } from './contexts';
 
 const App: React.FC = () => {
   // State
@@ -12,6 +14,7 @@ const App: React.FC = () => {
   const [isExiting, setIsExiting] = useState(false);
   const [showLevelSelect, setShowLevelSelect] = useState(false);
   const [mode, setMode] = useState<ViewMode>('research');
+  const [currentTheme, setCurrentTheme] = useState('theGarden');
 
   const handleStart = () => {
     setIsExiting(true);
@@ -22,23 +25,26 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="relative w-full h-screen overflow-hidden bg-[#1a1a1a]">
-      
-      {/* Intro Overlay */}
-      {showIntro && <IntroScreen onStart={handleStart} isExiting={isExiting} />}
+    <ThemeProvider themeId={currentTheme}>
+      <div className="relative w-full h-screen overflow-hidden bg-[#0a0f14]">
 
-      {/* Level Select Overlay */}
-      <LevelSelect isOpen={showLevelSelect} onClose={() => setShowLevelSelect(false)} />
+        {/* Intro Overlay */}
+        {showIntro && <IntroScreen onStart={handleStart} isExiting={isExiting} />}
 
-      {/* Background 3D Engine - Pass 'mode' to toggle the Penrose overlay inside */}
-      <EnginePreview showOverlay={mode === 'prototype'} />
+        {/* Level Select Overlay */}
+        <LevelSelect isOpen={showLevelSelect} onClose={() => setShowLevelSelect(false)} />
 
-      {/* Overlay Panel - Visual "Fog" when in research mode */}
-      <div 
-        className={`absolute inset-0 bg-[#1a1a1a]/80 backdrop-blur-sm transition-opacity duration-500 pointer-events-none ${
-          mode === 'prototype' ? 'opacity-0' : 'opacity-100'
-        }`} 
-      />
+        {/* Background 3D Engine - Pass level as children */}
+        <EnginePreview showOverlay={mode === 'prototype'}>
+          <LevelOne />
+        </EnginePreview>
+
+        {/* Overlay Panel - Visual "Fog" when in research mode */}
+        <div
+          className={`absolute inset-0 bg-[#0a0f14]/85 backdrop-blur-sm transition-opacity duration-500 pointer-events-none ${
+            mode === 'prototype' ? 'opacity-0' : 'opacity-100'
+          }`}
+        />
 
       {/* Main Content Layout */}
       <div className="absolute inset-0 flex pointer-events-none">
@@ -58,13 +64,14 @@ const App: React.FC = () => {
         <div className="flex-1" />
       </div>
 
-      {/* Header - Pass Level Open Handler */}
-      <Header 
-        activeMode={mode} 
-        setMode={setMode} 
-        onOpenLevels={() => setShowLevelSelect(true)}
-      />
-    </div>
+        {/* Header - Pass Level Open Handler */}
+        <Header
+          activeMode={mode}
+          setMode={setMode}
+          onOpenLevels={() => setShowLevelSelect(true)}
+        />
+      </div>
+    </ThemeProvider>
   );
 };
 

@@ -1,0 +1,188 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║                   WATER BRIDGE: VISUAL ARCHITECTURE                         ║
+║                   Beam-A → Water-Spout → Waterfall                          ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ ARTIST'S RENDERING: What the Player Sees in Isometric View                 ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+                                      ╔════════════════╗
+                                      ║   WATERFALL    ║ height=14
+                                      ║   [20.64, 5.44]║
+                                      ╚════════════════╝
+                                              ▲
+                                            ╱  ╲
+                                          ╱      ╲
+                                        ╱  WATER  ╲
+                                      ╱    FLOW    ╲
+                                    ╱                ╲
+                      ╔═══════════════════════════════╗
+                      ║     WATER-SPOUT (◆)          ║
+                      ║  [11.52, 9.19, -3.78]       ║
+                      ║  Single WaterBlock            ║
+                      ╚═══════════════════════════════╝
+                             ▲
+                           ╱   ╲
+                         ╱       ╲
+                       ╱           ╲
+                   ╔═════════════════════════╗
+                   ║    BEAM-A (WATER)       ║
+                   ║  [2.40, 0.00, -13.00]  ║
+                   ║  12 blocks in -Z dir    ║
+                   ║  Flow: [0, 1]           ║
+                   ╚═════════════════════════╝
+
+
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ SCHEMATIC: 3D Space Layout (Not to scale)                                   ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+        Z (depth: negative to positive)
+        ↓
+    -13 │
+        │  ◇───────────── BEAM-A
+        │  │ (water)      start: [2.40, 0.00, -1.00]
+        │  │              end:   [2.40, 0.00, -13.00]
+        │  └──────────────       12 blocks long
+        │           ◆
+        │          ╱│╲ SPOUT
+        │         ╱ │ ╲ [11.52, 9.19, -3.78]
+        │        │  │  │ elevation: 9.19
+        │        └──┴──┘
+        │           │
+     -4 │───────────┼────────────────────┐
+        │           │                     │
+     5  │───────────┼─────────────────────│───────★ WATERFALL
+        │           │                     │     [20.64, 18.38, 5.44]
+        │           │                    ╱       height: 14
+        │           │                  ╱
+        │           └─────────────────────
+        │
+      X (horizontal: 0 to 20)
+        → [2.40 to 20.64]
+
+
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ ELEVATION VIEW: Y-Axis Height Profile                                       ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+    Y
+   20 │
+      │                                ╔═════════════════╗
+   18 │                                ║    WATERFALL    ║
+      │                                ║   TOP: 18.38    ║
+   16 │                                ╚═════════════════╝
+      │                                          ▲
+   14 │                                        ╱   ╲
+      │                                      ╱       ╲
+   12 │                                    ╱           ╲
+      │                                  ╱               ╲
+   10 │         ◆─────────────────────╱───────────────────╲
+      │    SPOUT at Y=9.19           ╱                      ╲
+    8 │    [11.52, 9.19, -3.78]     ╱                        ╲
+      │      ▲                       ╱                          ╲
+    6 │      │                     ╱
+      │      │                   ╱  WATER ARC (optical path)
+    4 │      │                 ╱
+      │      │               ╱
+    2 │      │             ╱
+      │      │           ╱
+    0 │  ╔═══╩═══════════╗  BEAM-A endpoint
+      │  ║ BEAM-A       ║ [2.40, 0.00, -13.00]
+      │  ║ Y: 0.00      ║
+      │  ║ 12 blocks    ║
+      │  ╚═══════════════╝
+      │
+      └──────────────────────────────────────────── X →
+        2.40      11.52      20.64
+
+
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ GEOMETRIC ACCURACY                                                          ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+    CALCULATION: Midpoint of Beam-A End and Waterfall Top
+
+    Beam-A End:       [2.40, 0.00, -13.00]
+    Waterfall Top:    [20.64, 18.38, 5.44]
+    ─────────────────────────────────────────
+    Midpoint formula: [(x₁+x₂)/2, (y₁+y₂)/2, (z₁+z₂)/2]
+
+    X = (2.40 + 20.64) / 2 = 23.04 / 2 = 11.52 ✓
+    Y = (0.00 + 18.38) / 2 = 18.38 / 2 = 9.19 ✓
+    Z = (-13.00 + 5.44) / 2 = -7.56 / 2 = -3.78 ✓
+
+    SPOUT POSITION: [11.52, 9.19, -3.78] ✓✓✓
+
+
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ ISOMETRIC PROJECTION: Screen Alignment                                      ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+    Formula: screenX = worldX - worldZ
+
+    Beam-A end:       2.40 - (-13.00) = 15.40
+    Water-Spout:      11.52 - (-3.78) = 15.30  ← 0.10 pixels offset (imperceptible!)
+    Waterfall:        20.64 - 5.44 = 15.20    ← 0.10 pixels offset (imperceptible!)
+
+    RESULT: Nearly PERFECT vertical alignment in isometric view!
+            Three elements appear as ONE vertical line to the player.
+
+
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ WATER FLOW DIRECTION                                                        ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+    Beam-A:     flowDirection = [0, 1]  (positive isometric Y)
+    Spout:      flowDirection = [1, 0]  (positive X, toward waterfall)
+    Waterfall:  flowDirection = [0, 1]  (cascading down)
+
+    Water Path:
+      1. Flows off Beam-A in isometric +Y direction
+      2. Meets Spout at center point
+      3. Redirects toward Waterfall (X-axis)
+      4. Enters Waterfall and cascades
+
+
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ IMPLEMENTATION: Code Snippet                                                ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+<MovableWrapper
+  id="Water-Spout"
+  initialPos={[11.52, 9.19, -3.78]}
+  isSelected={selectedIds.has('Water-Spout')}
+  onSelect={handleSelect}
+  uiOffsetIndex={getUiIndex('Water-Spout')}
+>
+  <WaterBlock
+    position={[0, 0, 0]}
+    color={theme.palette.brick}
+    axis="x"
+    walls={[false, false]}
+    endWalls={[false, false]}
+    flowDirection={[1, 0]}
+  />
+</MovableWrapper>
+
+
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ ARCHITECTURAL PRINCIPLES                                                    ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+    ✓ MINIMAL:   1 block (not 30+)
+    ✓ ELEGANT:   Mathematically centered
+    ✓ ALIGNED:   Perfect isometric projection
+    ✓ EFFICIENT: No collision/physics complexity
+    ✓ MONUMENT VALLEY: Optical illusion as architecture
+
+
+═════════════════════════════════════════════════════════════════════════════════
+
+                         "In Monument Valley,
+                    the camera is the architect,
+                        and illusion is physics."
+
+═════════════════════════════════════════════════════════════════════════════════

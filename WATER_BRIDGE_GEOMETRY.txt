@@ -1,0 +1,177 @@
+================================================================================
+                    WATER BRIDGE: 3D GEOMETRY DIAGRAM
+================================================================================
+
+COORDINATE SYSTEM:
+  X: Left/Right (positive = right)
+  Y: Up/Down (positive = up)
+  Z: Forward/Back (positive = back, away from camera in isometric)
+
+================================================================================
+                           3D SPACE VIEW
+================================================================================
+
+                                    (20.64, 18.38, 5.44)
+                                      WATERFALL
+                                         TOP
+                                           ▲
+                                          ╱│╲
+                                         ╱ │ ╲
+                                        ╱  │  ╲  Height: 14 blocks
+                                       │   │   │
+                                       │ [WaterfallBlock]
+                                       │   │   │
+                                       │   │   │
+                                       └───┴───┘
+
+
+                     (11.52, 9.19, -3.78)
+                      WATER-SPOUT
+                    (Single WaterBlock)
+                           ◆◆◆
+                          ╱│╲
+                         ╱ │ ╲
+                        │  │  │  Elevation: 9.19
+                        └──┴──┘
+                           │
+                           │
+                           ├──────────────────►  Flow arc
+                           │
+                           │
+
+
+(2.40, 0.00, -13.00)
+BEAM-A END
+[12 blocks from start]
+   ◇──────────────────
+   ↑
+   └─ Water flows [0, 1]
+      (toward waterfall in isometric)
+
+
+================================================================================
+                        GEOMETRIC MEASUREMENTS
+================================================================================
+
+START POINT:
+  Beam-A Position:  [2.40, 0.00, -1.00]
+  Beam-A Length:    12 blocks in -Z
+  Beam-A Endpoint:  [2.40, 0.00, -13.00]
+
+CONNECTOR (SPOUT):
+  Position:         [11.52, 9.19, -3.78]
+  Distance from Beam-A: √[(11.52-2.40)² + (9.19-0)² + (-3.78-(-13))²]
+                       = √[9.12² + 9.19² + 9.22²]
+                       = √[252.5] ≈ 15.9 blocks
+
+END POINT:
+  Waterfall Top:    [20.64, 18.38, 5.44]
+  Distance from Spout: √[(20.64-11.52)² + (18.38-9.19)² + (5.44-(-3.78))²]
+                      = √[9.12² + 9.19² + 9.22²]
+                      = √[252.5] ≈ 15.9 blocks
+
+✓ SYMMETRY VERIFIED: Spout is exactly midway between Beam-A end and Waterfall top
+
+================================================================================
+                      ISOMETRIC VIEW (TOP-DOWN)
+================================================================================
+
+                           WATERFALL
+                        [20.64, 5.44]
+                              ▲
+                              │
+                              │
+                         Water arc
+                              │
+                         SPOUT ◆
+                    [11.52, -3.78]
+                              │
+                              │
+                              │
+                     Beam-A ──────►
+                    [2.40, -13]
+
+
+Isometric Projection Formula:
+  Screen X = Object X - Object Z
+  Screen Y = Object Y + (Object X + Object Z) / 2
+
+Beam-A visual position:   2.40 - (-13) = 15.40 on screen X
+Spout visual position:    11.52 - (-3.78) = 15.30 on screen X  ← Nearly aligned!
+Waterfall visual pos:     20.64 - 5.44 = 15.20 on screen X     ← Perfect alignment
+
+This explains "very very close" feedback from user!
+
+================================================================================
+                         ELEVATION PROFILE
+================================================================================
+
+Height (Y axis):
+  18.38 ┤
+        │                    ★ Waterfall
+        │                   ╱│╲
+  14.00 ┤                  │ │ │
+        │                  │ │ │
+  10.00 ┤           ▲      │ │ │
+        │          ╱ ╲     │ │ │
+   9.19 ┤    ◆     │  ─────┘ │ │
+        │  ╱ ╲     │         │ │
+   5.00 ┤ │  ─────┘          │ │
+        │                    │ │
+   0.00 ┤ ■ Beam-A endpoint  │ │
+        │ (continues above)  └─┘
+        └──────────────────────────
+           2.40      11.52      20.64  (X position)
+
+Water flows: A (Y=0) → Spout (Y=9.19) → Waterfall (Y=18.38)
+
+================================================================================
+                        IMPLEMENTATION DETAILS
+================================================================================
+
+ADD TO LevelOne.tsx (after Beam-A, before Waterfall):
+
+<MovableWrapper
+  id="Water-Spout"
+  initialPos={[11.52, 9.19, -3.78]}
+  isSelected={selectedIds.has('Water-Spout')}
+  onSelect={handleSelect}
+  uiOffsetIndex={getUiIndex('Water-Spout')}
+>
+  <WaterBlock
+    position={[0, 0, 0]}
+    color={theme.palette.brick}
+    axis="x"
+    walls={[false, false]}
+    endWalls={[false, false]}
+    flowDirection={[1, 0]}
+  />
+</MovableWrapper>
+
+================================================================================
+                         DESIGN PHILOSOPHY
+================================================================================
+
+MINIMAL ARCHITECTURE:
+  • 1 WaterBlock = entire bridge
+  • 0 BaseBlocks needed
+  • 0 decorative elements
+
+MONUMENT VALLEY PRINCIPLE:
+  • Uses optical illusion (isometric projection)
+  • Not physical geometry, but perceptual connection
+  • Leverages camera alignment for visual continuity
+
+ELEGANCE:
+  • Position is mathematically centered (true midpoint)
+  • Nearly perfect X-axis alignment in isometric view
+  • Water flows naturally from source to destination
+  • Minimal visual clutter in scene
+
+FLEXIBILITY:
+  • Can adjust ±0.5 units in any dimension for fine-tuning
+  • Flow direction can be animated or reversed
+  • Can scale height of spout without changing logic
+  • Can add particle effects without architectural changes
+
+================================================================================

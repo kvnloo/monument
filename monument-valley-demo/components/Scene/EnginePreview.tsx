@@ -1,8 +1,8 @@
-import React, { useLayoutEffect, useState, useMemo } from 'react';
+import React, { useLayoutEffect, useState, useMemo, ReactNode } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
 import { OrthographicCamera, OrbitControls } from '@react-three/drei';
-import { LevelOne } from './LevelOne';
-import { PALETTE } from '../../constants';
+import * as THREE from 'three';
+import { useTheme } from '../../contexts';
 
 /**
  * IsoCameraRig
@@ -11,7 +11,7 @@ import { PALETTE } from '../../constants';
  */
 const IsoCameraRig = () => {
   const { camera } = useThree();
-  
+
   useLayoutEffect(() => {
     // Standard Isometric setup:
     // Position at equal distances on all axes (e.g. 20,20,20)
@@ -23,11 +23,75 @@ const IsoCameraRig = () => {
   return null;
 };
 
+/**
+ * ThemedLighting
+ * Applies lighting configuration from the current theme
+ */
+const ThemedLighting: React.FC = () => {
+  const { theme } = useTheme();
+
+  return (
+    <>
+      <ambientLight
+        intensity={theme.lighting.ambient.intensity}
+        color={theme.lighting.ambient.color}
+      />
+
+      <directionalLight
+        position={theme.lighting.directional.position}
+        intensity={theme.lighting.directional.intensity}
+        castShadow
+        shadow-mapSize={[2048, 2048]}
+        shadow-bias={-0.0005}
+        color={theme.lighting.directional.color}
+      />
+
+      {theme.lighting.rim && (
+        <directionalLight
+          position={theme.lighting.rim.position}
+          intensity={theme.lighting.rim.intensity}
+          color={theme.lighting.rim.color}
+          castShadow={false}
+        />
+      )}
+    </>
+  );
+};
+
+/**
+ * ThemedFog
+ * Applies fog configuration from the current theme
+ */
+const ThemedFog: React.FC = () => {
+  const { theme } = useTheme();
+  const { scene } = useThree();
+
+  useLayoutEffect(() => {
+    if (theme.atmosphere.fog) {
+      scene.fog = new THREE.Fog(
+        theme.atmosphere.fog.color,
+        theme.atmosphere.fog.near,
+        theme.atmosphere.fog.far
+      );
+    } else {
+      scene.fog = null;
+    }
+
+    return () => {
+      scene.fog = null;
+    };
+  }, [theme, scene]);
+
+  return null;
+};
+
 interface EnginePreviewProps {
     showOverlay?: boolean;
+    children: ReactNode;
 }
 
-export const EnginePreview: React.FC<EnginePreviewProps> = ({ showOverlay = false }) => {
+export const EnginePreview: React.FC<EnginePreviewProps> = ({ showOverlay = false, children }) => {
+  const { theme } = useTheme();
   const [isLocked, setIsLocked] = useState(true);
 
   // GPU Capability Heuristic
@@ -39,8 +103,12 @@ export const EnginePreview: React.FC<EnginePreviewProps> = ({ showOverlay = fals
     return pixelRatio > 1 || cores >= 4;
   }, []);
 
+  const backgroundStyle = {
+    background: `linear-gradient(to bottom, ${theme.atmosphere.backgroundGradient.from} 0%, ${theme.atmosphere.backgroundGradient.mid} 50%, ${theme.atmosphere.backgroundGradient.to} 100%)`
+  };
+
   return (
-    <div className="w-full h-full absolute top-0 left-0" style={{ background: `linear-gradient(to bottom, #2a2a2a, ${PALETTE.background})` }}>
+    <div className="w-full h-full absolute top-0 left-0" style={backgroundStyle}>
       <Canvas 
         shadows 
         dpr={isHighPerf ? [1, 2] : 1}
@@ -73,31 +141,19 @@ export const EnginePreview: React.FC<EnginePreviewProps> = ({ showOverlay = fals
             />
         )}
 
-        {/* 
-            LIGHTING STRATEGY:
-            Soft ambient to avoid pitch black shadows on the "hidden" faces.
-            Directional light aligned to highlight top faces and cast shape-defining shadows.
-        */}
-        <ambientLight intensity={0.7} color="#cceeff" />
-        
-        <directionalLight 
-          position={[-10, 20, 5]} 
-          intensity={0.8} 
-          castShadow 
-          shadow-mapSize={[2048, 2048]}
-          shadow-bias={-0.0005}
-          color="#fff0dd"
-        />
+        {/* Theme-aware lighting */}
+        <ThemedLighting />
+        <ThemedFog />
 
         {/* Level Content */}
-        <LevelOne />
+        {children}
         
       </Canvas>
       
-      {/* Penrose Tribute Overlay (Visible in Engine Mode) */}
+      {/* Level Name Overlay (Visible in Engine Mode) */}
       {showOverlay && (
         <div className="absolute top-24 left-8 pointer-events-none z-40">
-            <h2 className="text-5xl font-serif text-white tracking-widest mb-2 drop-shadow-2xl">PENROSE</h2>
+            <h2 className="text-5xl font-serif text-white tracking-widest mb-2 drop-shadow-2xl">{theme.name.toUpperCase()}</h2>
             <p className="text-xs font-sans text-mv-accent tracking-[0.3em] uppercase font-semibold">
                 Monument Valley Tribute
             </p>
@@ -126,6 +182,7 @@ export const EnginePreview: React.FC<EnginePreviewProps> = ({ showOverlay = fals
         <div className="bg-black/60 backdrop-blur px-4 py-2 rounded-lg border border-white/10">
             <p className="text-xs font-mono text-mv-accent">ENGINE: ACTIVE</p>
             <p className="text-[10px] font-mono text-gray-400">Cam: {isLocked ? 'Iso Rig (Locked)' : 'Free Orbit'}</p>
+            <p className="text-[10px] font-mono text-gray-400">Theme: {theme.name}</p>
         </div>
         
         {/* GPU Status Indicator */}

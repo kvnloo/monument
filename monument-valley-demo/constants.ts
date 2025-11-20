@@ -69,19 +69,5 @@ Focus on high-level architecture, mathematical concepts (orthographic projection
 Do not write the full game. Write the *plan* and the *architectural patterns*.
 Use strict TypeScript syntax in examples.`;
 
-// Color Palette for "The Garden"
-export const PALETTE = {
-  background: '#1A2A30', // Deep Teal/Black gradient base
-  brick: '#E8E8E8',      // Cool White for main surfaces
-  brickDark: '#98AAB4',  // Muted Blue-Grey for side faces
-  shadow: '#3A4A50',     // Dark Teal-Gray shadows for pillars
-  accent: '#4DD9D9',     // Cyan/Turquoise for Friend/Totem
-  character: '#FFFFFF',  // Character White (Ida)
-  path: '#FFFFFF',       // Pure white for walkable tops
-  door: '#2D3436',       // Dark door interior
-  water: '#4ECDC4',      // Bright Teal Water
-  waterfall: '#89E0D9'   // Lighter Waterfall
-};
-
 // Grid unit size
 export const UNIT = 1;
