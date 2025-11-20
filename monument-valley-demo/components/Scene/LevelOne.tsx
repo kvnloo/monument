@@ -4,16 +4,12 @@ import * as THREE from 'three';
 import { BaseBlock, TowerBlock, DomeCap, Character, WaterBlock, WaterfallBlock, WalledBlock, ArchBlock } from './BuildingBlocks';
 import { PALETTE } from '../../constants';
 
-/**
- * MovableWrapper
- * Supports independent selection and movement.
- */
 interface MovableWrapperProps {
   id: string;
   initialPos: [number, number, number];
   isSelected: boolean;
   onSelect: (id: string, multi: boolean) => void;
-  uiOffsetIndex?: number; // To stack UI panels if multiple are selected
+  uiOffsetIndex?: number;
   children: React.ReactNode;
 }
 
@@ -29,17 +25,13 @@ const MovableWrapper: React.FC<MovableWrapperProps> = ({
   const [displayPos, setDisplayPos] = useState<[number, number, number]>(initialPos);
   const [copyLabel, setCopyLabel] = useState('COPY POS');
 
-  // Initialize position once on mount. 
   useLayoutEffect(() => {
     if (groupRef.current) {
       groupRef.current.position.set(...initialPos);
     }
   }, []); 
 
-  // Format for display
   const fmt = (n: number) => n.toFixed(2);
-
-  // Calculate UI Top position based on index to prevent overlap
   const uiTop = `${40 + (uiOffsetIndex * 25)}%`;
 
   const handleCopy = (e: React.MouseEvent) => {
@@ -65,7 +57,6 @@ const MovableWrapper: React.FC<MovableWrapperProps> = ({
         />
       )}
 
-      {/* Coordinate Popup - Pinned to Screen */}
       {isSelected && (
           <Html fullscreen style={{ pointerEvents: 'none' }}>
             <div 
@@ -84,7 +75,7 @@ const MovableWrapper: React.FC<MovableWrapperProps> = ({
                     className="text-xs text-gray-500 hover:text-white"
                     onClick={(e) => {
                         e.stopPropagation();
-                        onSelect(id, true); // effectively toggle off if already selected
+                        onSelect(id, true); 
                     }}
                 >✕</button>
               </div>
@@ -112,10 +103,8 @@ const MovableWrapper: React.FC<MovableWrapperProps> = ({
         ref={groupRef}
         onClick={(e) => { 
           e.stopPropagation(); 
-          // Pass shift key status to handler
           onSelect(id, e.shiftKey);
           
-          // Sync display pos on select
           if(groupRef.current) {
               const { x, y, z } = groupRef.current.position;
               setDisplayPos([x, y, z]);
@@ -126,7 +115,6 @@ const MovableWrapper: React.FC<MovableWrapperProps> = ({
       >
         {children}
 
-        {/* Hint Label */}
         {!isSelected && (
             <Html position={[0, 0, 0]} center distanceFactor={10} zIndexRange={[100, 0]} style={{ pointerEvents: 'none' }}>
                 <div className="opacity-0 hover:opacity-100 bg-black/50 text-white text-[10px] px-2 py-1 rounded transition-opacity whitespace-nowrap backdrop-blur-sm border border-white/10 pointer-events-none">
@@ -139,18 +127,13 @@ const MovableWrapper: React.FC<MovableWrapperProps> = ({
   );
 };
 
-/**
- * Level One: "The Triad"
- */
 export const LevelOne: React.FC = () => {
-  // Selection State
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const handleSelect = (id: string, isMulti: boolean) => {
       setSelectedIds(prev => {
           const next = new Set(isMulti ? prev : []);
           if (next.has(id)) {
-              // If multi-select, toggle off. If single select, clicking again keeps it selected.
               if (isMulti) next.delete(id);
               else next.add(id); 
           } else {
@@ -160,21 +143,22 @@ export const LevelOne: React.FC = () => {
       });
   };
   
-  // Helper to create linear paths
   const Path = ({ 
       start, 
       length, 
       axis, 
       color, 
       type = 'brick',
-      customBlocks = {}
+      customBlocks = {},
+      flowDirection = [0, 0]
   }: { 
       start: [number, number, number], 
       length: number, 
       axis: 'x' | 'y' | 'z' | 'negZ', 
       color: string,
       type?: 'brick' | 'water' | 'walled',
-      customBlocks?: { [key: number]: { walls?: [boolean, boolean], endWalls?: [boolean, boolean] } }
+      customBlocks?: { [key: number]: { walls?: [boolean, boolean], endWalls?: [boolean, boolean] } },
+      flowDirection?: [number, number]
   }) => {
       const blocks = [];
       for(let i=0; i<length; i++) {
@@ -184,13 +168,11 @@ export const LevelOne: React.FC = () => {
           if(axis === 'z') pos[2] += i;
           if(axis === 'negZ') pos[2] -= i;
           
-          // Check for override configs
           const overrides = customBlocks[i] || {};
-          const walls = overrides.walls; // undefined means default [true, true]
+          const walls = overrides.walls;
           const endWalls = overrides.endWalls;
 
           if (type === 'water') {
-              // Determine orientation for water channel walls
               const waterAxis = (axis === 'x') ? 'x' : 'z';
               blocks.push(
                 <WaterBlock 
@@ -200,10 +182,10 @@ export const LevelOne: React.FC = () => {
                     axis={waterAxis} 
                     walls={walls} 
                     endWalls={endWalls}
+                    flowDirection={flowDirection}
                 />
               );
           } else if (type === 'walled') {
-              // Determine orientation for walkways
               const wallAxis = (axis === 'x') ? 'x' : 'z';
               blocks.push(
                   <WalledBlock
@@ -222,20 +204,17 @@ export const LevelOne: React.FC = () => {
       return <group>{blocks}</group>;
   };
 
-  // Config
   const ORIGIN: [number, number, number] = [0, -4, 0];
   const SIZE = 8; 
 
-  // Helper to calculate UI index for stacking
   const getUiIndex = (id: string) => {
       const arr = Array.from(selectedIds);
       return arr.indexOf(id);
   };
 
   return (
-    <group position={[0, 0, 0]} onClick={() => setSelectedIds(new Set()) /* Deselect all on BG click */}> 
+    <group position={[0, 0, 0]} onClick={() => setSelectedIds(new Set())}> 
 
-      {/* --- 1. BLUE LINE: VERTICAL PILLAR (Y-Axis) --- */}
       <MovableWrapper
         id="Main-Pillar"
         initialPos={ORIGIN}
@@ -243,16 +222,19 @@ export const LevelOne: React.FC = () => {
         onSelect={handleSelect}
         uiOffsetIndex={getUiIndex('Main-Pillar')}
       >
-        {/* Manually constructed pillar to allow ArchBlock at base */}
         <group>
-            {/* Bottom Doorway Block */}
-            <ArchBlock position={[0,0,0]} color={PALETTE.brickDark} rotation={[0, 0, 0]} />
-            {/* Rest of the stack */}
+            {/* Stack of blocks going up. */}
             <Path 
-                start={[0,1,0]} 
-                length={SIZE-1} 
+                start={[0,0,0]} 
+                length={SIZE-1} // 0 to 6
                 axis="y" 
                 color={PALETTE.brickDark} 
+            />
+            {/* Doorway moved to index 3 to match visual alignment request. Rotated to face Right (X-axis) */}
+            <ArchBlock 
+                position={[0, 3, 0]} 
+                color={PALETTE.brickDark} 
+                rotation={[0, Math.PI/2, 0]} 
             />
         </group>
       </MovableWrapper>
@@ -266,13 +248,17 @@ export const LevelOne: React.FC = () => {
       >
           <group>
             <BaseBlock position={[0, 0, 0]} color={PALETTE.brick} />
-            {/* Added hasDoor prop for the top doorway */}
-            <TowerBlock position={[0, 1, 0]} color={PALETTE.brick} hasDoor={true} />
+            {/* Tower door also rotated to face Right (X-axis) */}
+            <TowerBlock 
+                position={[0, 1, 0]} 
+                color={PALETTE.brick} 
+                hasDoor={true} 
+                rotation={[0, Math.PI/2, 0]} 
+            />
             <DomeCap position={[0, 2.5, 0]} color={PALETTE.brick} />
           </group>
       </MovableWrapper>
 
-      {/* --- 2. RED LINE (TOP): HORIZONTAL BEAM (X-Axis) --- */}
       <MovableWrapper
         id="Top-Beam"
         initialPos={[ORIGIN[0] + 1, ORIGIN[1] + SIZE - 1, ORIGIN[2]]}
@@ -282,7 +268,7 @@ export const LevelOne: React.FC = () => {
       >
         <Path 
             start={[0,0,0]} 
-            length={SIZE - 1} // Reduced length to prevent overlap with Corner-Block
+            length={SIZE - 1}
             axis="x" 
             color={PALETTE.brick} 
             type="walled"
@@ -296,17 +282,15 @@ export const LevelOne: React.FC = () => {
         onSelect={handleSelect}
         uiOffsetIndex={getUiIndex('Corner-Block')}
       >
-         {/* Changed to WalledBlock to handle corner walls and match height */}
          <WalledBlock 
             position={[0, 0, 0]} 
             color={PALETTE.brick} 
             axis="x"
-            walls={[false, true]} // Open Z+ (turn), Keep Z- (outer wall)
-            endWalls={[false, true]} // Open X- (connect), Keep X+ (outer wall)
+            walls={[false, true]} 
+            endWalls={[false, true]}
          />
       </MovableWrapper>
 
-      {/* --- 3. RED LINE (RETURN): DEPTH BEAM (Z-Axis) --- */}
       <MovableWrapper
         id="Return-Beam"
         initialPos={[ORIGIN[0] + SIZE, ORIGIN[1] + SIZE - 1, ORIGIN[2] + 1]}
@@ -316,16 +300,15 @@ export const LevelOne: React.FC = () => {
       >
         <Path 
             start={[0,0,0]} 
-            length={SIZE - 1} // Reduced length to prevent overlap with End-Platform
+            length={SIZE - 1}
             axis="z" 
             color={PALETTE.brickDark} 
             type="walled"
         />
       </MovableWrapper>
 
-      {/* --- 4. THE GREEN VOID STRUCTURE (MOVABLE & SPLIT) --- */}
-      
-      {/* Beam A: The Long Diagonal (Neg Z) -> NOW WATER */}
+      {/* Beam A: The Long Diagonal (Neg Z) -> Flows to Positive Z (Away from waterfall?) */}
+      {/* Previous was [0, -1]. Reversed to [0, 1]. */}
       <MovableWrapper 
         id="Beam-A"
         initialPos={[2.40, 0.00, -1.00]} 
@@ -339,16 +322,14 @@ export const LevelOne: React.FC = () => {
             axis="negZ"
             color={PALETTE.brick} 
             type="water"
+            flowDirection={[0, 1]} 
             customBlocks={{
-              // Index 0 (Z=-1): Was previously capped. Now OPENING it per user request.
               0: { endWalls: [false, false] }, 
-              // Index 11 (Z=-12): Remove Side 1 (X+) wall, AND ADD END CAP to Z- side (endWalls[0])
               11: { walls: [false, true], endWalls: [true, false] } 
             }}
           />
       </MovableWrapper>
 
-      {/* Waterfall Object */}
       <MovableWrapper
         id="Waterfall"
         initialPos={[20.64, 18.06, 5.44]}
@@ -359,7 +340,8 @@ export const LevelOne: React.FC = () => {
         <WaterfallBlock height={14} />
       </MovableWrapper>
 
-      {/* Beam B: The Short Corner (X Axis) -> NOW WATER */}
+      {/* Beam B: The Short Corner (X Axis) -> Flows to Negative X */}
+      {/* Previous was [1, 0]. Reversed to [-1, 0]. */}
       <MovableWrapper 
         id="Beam-B"
         initialPos={[7.90, 5.50, 5.44]}
@@ -373,17 +355,14 @@ export const LevelOne: React.FC = () => {
             axis="x"
             color={PALETTE.brickDark} 
             type="water"
+            flowDirection={[-1, 0]} 
             customBlocks={{
-                // Beam-B Index 0: 
-                // Walls: [true, false] -> Close Z+, Open Z- (Entry from Beam-A)
-                // EndWalls: [true, false] -> Close X- (Start Cap), Open X+ (Flow)
                 0: { walls: [true, false], endWalls: [true, false] }, 
-                15: { endWalls: [false, true] } // Cap the end of the water channel
+                15: { endWalls: [false, true] }
             }}
           />
       </MovableWrapper>
       
-      {/* Visual "End" of the Z-beam */}
       <MovableWrapper
         id="End-Platform"
         initialPos={[ORIGIN[0] + SIZE, ORIGIN[1] + SIZE - 1, ORIGIN[2] + SIZE]}
@@ -392,7 +371,6 @@ export const LevelOne: React.FC = () => {
         uiOffsetIndex={getUiIndex('End-Platform')}
       >
          <group>
-            {/* Changed to WalledBlock to match surrounding architecture */}
             <WalledBlock 
                 position={[0, 0, 0]} 
                 color={PALETTE.brickDark} 
@@ -404,7 +382,6 @@ export const LevelOne: React.FC = () => {
          </group>
       </MovableWrapper>
 
-      {/* Character IDA */}
       <MovableWrapper
         id="Character-Ida"
         initialPos={[ORIGIN[0] + 2, ORIGIN[1] + SIZE - 1, ORIGIN[2]]}
