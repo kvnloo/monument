@@ -1,4 +1,4 @@
-import React, { useMemo, useRef } from 'react';
+import React, { useMemo, useRef, useLayoutEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { PALETTE, UNIT } from '../../constants';
@@ -11,9 +11,43 @@ interface BlockProps {
 }
 
 /**
- * BaseBlock
- * The atomic unit of the world.
+ * Generates a procedural noise texture for water.
+ * Uses an off-screen canvas to create a seamless noise pattern.
  */
+const createWaterTexture = (): THREE.CanvasTexture => {
+  const size = 512;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  
+  if (ctx) {
+    // 1. Deep Teal Background for contrast
+    ctx.fillStyle = '#1a8a82'; 
+    ctx.fillRect(0, 0, size, size);
+    
+    // 2. High Contrast Bright Streaks
+    for (let i = 0; i < 600; i++) {
+      const x = Math.random() * size;
+      const y = Math.random() * size;
+      const alpha = Math.random() * 0.6 + 0.4; 
+      const length = Math.random() * 100 + 40; 
+      const thickness = Math.random() * 4 + 2;
+      
+      ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+      ctx.beginPath();
+      ctx.rect(x, y, length, thickness);
+      ctx.fill();
+    }
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.needsUpdate = true;
+  return texture;
+};
+
 export const BaseBlock: React.FC<BlockProps> = ({ 
   position, 
   color = PALETTE.brick, 
@@ -40,12 +74,6 @@ export const BaseBlock: React.FC<BlockProps> = ({
   );
 };
 
-/**
- * WalledBlock
- * A walkway with walls on the sides.
- * walls: [side1, side2] (Longitudinal walls)
- * endWalls: [start, end] (Perpendicular caps)
- */
 export const WalledBlock: React.FC<BlockProps & { axis?: 'x' | 'z', walls?: [boolean, boolean], endWalls?: [boolean, boolean] }> = ({ 
     position, 
     color = PALETTE.brick, 
@@ -55,53 +83,31 @@ export const WalledBlock: React.FC<BlockProps & { axis?: 'x' | 'z', walls?: [boo
 }) => {
     const isX = axis === 'x';
     const wallThickness = 0.15;
-    const wallHeight = 0.25; // Height above floor
+    const wallHeight = 0.25;
 
-    /**
-     * Helper to calculate EndWall dimensions and position to avoid Z-fighting with SideWalls.
-     * If a side wall exists, the end wall must be shortened to butt against it, rather than overlap.
-     */
     const getEndWallMetrics = (isStart: boolean) => {
-        // Start wall interacts with the 'start' of the side walls? 
-        // Actually, side walls run the full length of the block (from -0.5 to 0.5).
-        // So both Start and End caps interact with the same Side walls.
-        
-        // Determine length of the end cap based on presence of side walls
         let length = 1;
         let offset = 0;
 
         if (walls[0] && walls[1]) {
-            // Both sides present: Shorten from both ends
             length = 1 - (2 * wallThickness);
             offset = 0;
         } else if (walls[0]) {
-            // Side 0 present: Shorten from Side 0
             length = 1 - wallThickness;
-            // If isX: Side 0 is Z+. We shift towards Z- (negative offset)
-            // If isZ: Side 0 is X+. We shift towards X- (negative offset)
             offset = -wallThickness / 2; 
         } else if (walls[1]) {
-            // Side 1 present: Shorten from Side 1
             length = 1 - wallThickness;
-            // If isX: Side 1 is Z-. We shift towards Z+ (positive offset)
-            // If isZ: Side 1 is X-. We shift towards X+ (positive offset)
             offset = wallThickness / 2;
         }
 
-        // Position relative to the block center
-        // isStart determines if it's at the -0.5 or +0.5 end of the primary axis
         const mainAxisOffset = isStart ? -0.5 + wallThickness/2 : 0.5 - wallThickness/2;
         
         if (isX) {
-            // Primary axis X. End wall sits at X- or X+.
-            // End wall runs along Z.
             return {
                 args: [wallThickness, wallHeight, length] as [number, number, number],
                 position: [mainAxisOffset, 0.3, offset] as [number, number, number]
             };
         } else {
-            // Primary axis Z. End wall sits at Z- or Z+.
-            // End wall runs along X.
             return {
                 args: [length, wallHeight, wallThickness] as [number, number, number],
                 position: [offset, 0.3, mainAxisOffset] as [number, number, number]
@@ -114,13 +120,11 @@ export const WalledBlock: React.FC<BlockProps & { axis?: 'x' | 'z', walls?: [boo
 
     return (
         <group position={position}>
-            {/* Floor - slightly recessed to imply walls */}
             <mesh castShadow receiveShadow position={[0, -0.1, 0]}>
                 <boxGeometry args={[1, 0.8, 1]} />
                 <meshStandardMaterial color={color} flatShading />
             </mesh>
 
-            {/* Longitudinal Side Walls (Full Length) */}
             {isX ? (
                 <>
                     {walls[0] && (
@@ -153,7 +157,6 @@ export const WalledBlock: React.FC<BlockProps & { axis?: 'x' | 'z', walls?: [boo
                 </>
             )}
 
-            {/* End Cap Walls (Perpendicular) - Dynamically Sized */}
             {endWalls[0] && (
                 <mesh castShadow receiveShadow position={startMetrics.position}>
                     <boxGeometry args={startMetrics.args} />
@@ -172,73 +175,100 @@ export const WalledBlock: React.FC<BlockProps & { axis?: 'x' | 'z', walls?: [boo
 
 /**
  * WaterBlock
- * A container block with moving water inside.
- * walls prop: [side1, side2] boolean flags.
- * endWalls prop: [start, end] boolean flags for caps.
+ * Supports directional flow animation.
+ * flowDirection: [x, z] vector. 
  */
-export const WaterBlock: React.FC<BlockProps & { axis?: 'x' | 'z', walls?: [boolean, boolean], endWalls?: [boolean, boolean] }> = ({ 
+export const WaterBlock: React.FC<BlockProps & { 
+  axis?: 'x' | 'z', 
+  walls?: [boolean, boolean], 
+  endWalls?: [boolean, boolean],
+  flowDirection?: [number, number] 
+}> = ({ 
   position, 
   color = PALETTE.brickDark,
   axis = 'x',
   walls = [true, true],
-  endWalls = [false, false]
+  endWalls = [false, false],
+  flowDirection = [0, 0]
 }) => {
     const waterRef = useRef<THREE.Mesh>(null);
     const isX = axis === 'x';
 
-    // Dimensions
+    // Procedural texture generation
+    const waterTexture = useMemo(() => createWaterTexture(), []);
+    const textureInstance = useMemo(() => waterTexture.clone(), [waterTexture]);
+
     const wallThickness = 0.15;
     const floorHeight = 0.2;
-    // Water Setup
-    const waterBaseHeight = 0.15; // Center Y of water
-    const waterHeight = 0.7;      // Height of water volume
+    const waterBaseHeight = 0.15;
+    const waterHeight = 0.7;
     
-    // Animate the water level slightly to make it feel "active"
-    useFrame((state) => {
+    // Dynamic Water Sizing with Gap to prevent Z-Fighting
+    const waterWidth = 0.68; 
+    const gap = 0.01; // Gap to prevent overlapping faces
+    let waterLength = 1;
+    let waterOffset = 0;
+    
+    if (endWalls[0]) {
+        waterLength -= (wallThickness + gap);
+        waterOffset += (wallThickness + gap) / 2;
+    }
+    if (endWalls[1]) {
+        waterLength -= (wallThickness + gap);
+        waterOffset -= (wallThickness + gap) / 2;
+    }
+
+    const waterArgs: [number, number, number] = isX 
+        ? [waterLength, waterHeight, waterWidth] 
+        : [waterWidth, waterHeight, waterLength];
+    
+    const waterPos: [number, number, number] = isX
+        ? [waterOffset, waterBaseHeight, 0]
+        : [0, waterBaseHeight, waterOffset];
+
+    // Fix Texture Stretching by Repeating it based on length
+    useLayoutEffect(() => {
+        // Calculate repeat count based on actual length to maintain consistent texture density
+        const repeatX = isX ? waterArgs[0] : 1;
+        const repeatY = !isX ? waterArgs[2] : 1;
+        
+        // Ensure at least 1 repeat so it doesn't stretch weirdly on small blocks
+        textureInstance.repeat.set(Math.max(1, repeatX), Math.max(1, repeatY));
+    }, [waterArgs, isX, textureInstance]);
+
+    useFrame((state, delta) => {
         if (waterRef.current) {
-            // Oscillate around the high water mark (approx 0.15 base + sine wave)
             waterRef.current.position.y = waterBaseHeight + Math.sin(state.clock.elapsedTime * 3 + position[0] * 0.5 + position[2] * 0.5) * 0.02;
+            
+            const speed = 1.5;
+            // Adjust offset based on flow direction
+            // Texture mapping: U is typically X-aligned in box mapping for top face.
+            textureInstance.offset.x += flowDirection[0] * speed * delta;
+            textureInstance.offset.y -= flowDirection[1] * speed * delta;
         }
     });
 
-    /**
-     * Helper to calculate EndWall dimensions and position to avoid Z-fighting with SideWalls.
-     * Identical logic to WalledBlock, but adapted for WaterBlock heights.
-     */
+    // Recalculate End Wall geometry
     const getEndWallMetrics = (isStart: boolean) => {
         let length = 1;
         let offset = 0;
-
         if (walls[0] && walls[1]) {
             length = 1 - (2 * wallThickness);
             offset = 0;
         } else if (walls[0]) {
-            // Side 0 present
             length = 1 - wallThickness;
-            // isX: Side 0 is Z+ -> offset neg
-            // isZ: Side 0 is X+ -> offset neg
             offset = -wallThickness / 2; 
         } else if (walls[1]) {
-            // Side 1 present
             length = 1 - wallThickness;
-            // isX: Side 1 is Z- -> offset pos
-            // isZ: Side 1 is X- -> offset pos
             offset = wallThickness / 2;
         }
-
-        // Position relative to the block center (longitudinal axis)
         const mainAxisOffset = isStart ? -0.5 + wallThickness/2 : 0.5 - wallThickness/2;
-        
         if (isX) {
-            // Primary axis X. End wall runs along Z.
-            // args: [thickness, height, length]
             return {
                 args: [wallThickness, 1, length] as [number, number, number],
                 position: [mainAxisOffset, 0, offset] as [number, number, number]
             };
         } else {
-            // Primary axis Z. End wall runs along X.
-            // args: [length, height, thickness]
             return {
                 args: [length, 1, wallThickness] as [number, number, number],
                 position: [offset, 0, mainAxisOffset] as [number, number, number]
@@ -251,23 +281,19 @@ export const WaterBlock: React.FC<BlockProps & { axis?: 'x' | 'z', walls?: [bool
 
     return (
         <group position={position}>
-            {/* 1. The Container Floor */}
             <mesh castShadow receiveShadow position={[0, -0.5 + floorHeight/2, 0]}>
                 <boxGeometry args={[1, floorHeight, 1]} />
                 <meshStandardMaterial color={color} flatShading />
             </mesh>
 
-            {/* 2. Side Walls (Longitudinal) */}
             {isX ? (
                 <>
-                    {/* Side 1: Z+ */}
                     {walls[0] && (
                         <mesh castShadow receiveShadow position={[0, 0, 0.5 - wallThickness/2]}>
                             <boxGeometry args={[1, 1, wallThickness]} />
                             <meshStandardMaterial color={color} flatShading />
                         </mesh>
                     )}
-                    {/* Side 2: Z- */}
                     {walls[1] && (
                         <mesh castShadow receiveShadow position={[0, 0, -0.5 + wallThickness/2]}>
                             <boxGeometry args={[1, 1, wallThickness]} />
@@ -277,14 +303,12 @@ export const WaterBlock: React.FC<BlockProps & { axis?: 'x' | 'z', walls?: [bool
                 </>
             ) : (
                 <>
-                    {/* Side 1: X+ */}
                     {walls[0] && (
                         <mesh castShadow receiveShadow position={[0.5 - wallThickness/2, 0, 0]}>
                             <boxGeometry args={[wallThickness, 1, 1]} />
                             <meshStandardMaterial color={color} flatShading />
                         </mesh>
                     )}
-                    {/* Side 2: X- */}
                     {walls[1] && (
                         <mesh castShadow receiveShadow position={[-0.5 + wallThickness/2, 0, 0]}>
                             <boxGeometry args={[wallThickness, 1, 1]} />
@@ -294,7 +318,6 @@ export const WaterBlock: React.FC<BlockProps & { axis?: 'x' | 'z', walls?: [bool
                 </>
             )}
 
-            {/* 3. End Cap Walls (Perpendicular) - Dynamically Sized */}
             {endWalls[0] && (
                 <mesh castShadow receiveShadow position={startMetrics.position}>
                     <boxGeometry args={startMetrics.args} />
@@ -308,49 +331,53 @@ export const WaterBlock: React.FC<BlockProps & { axis?: 'x' | 'z', walls?: [bool
                 </mesh>
             )}
 
-            {/* 4. The Active Water Surface */}
-            <mesh ref={waterRef} position={[0, waterBaseHeight, 0]}>
-                {/* Reduced width from 0.7 to 0.68 to prevent Z-fighting with walls */}
-                <boxGeometry args={[isX ? 1 : 0.68, waterHeight, isX ? 0.68 : 1]} />
+            <mesh ref={waterRef} position={waterPos}>
+                <boxGeometry args={waterArgs} />
+                {/* White base color to let texture show true colors. High emissive for glow. */}
                 <meshStandardMaterial 
-                    color={PALETTE.water} 
-                    roughness={0.0}
-                    metalness={0.2}
+                    color="white" 
+                    roughness={0.2}
+                    metalness={0.1}
                     emissive={PALETTE.water}
-                    emissiveIntensity={0.4}
+                    emissiveIntensity={0.8}
                     transparent
                     opacity={0.9}
+                    map={textureInstance}
                 />
             </mesh>
         </group>
     );
 };
 
-/**
- * WaterfallBlock
- * A vertical sheet of water.
- */
 export const WaterfallBlock: React.FC<BlockProps & { height?: number }> = ({ 
     position, 
     height = 6, 
     color = PALETTE.waterfall 
 }) => {
+    const waterTexture = useMemo(() => createWaterTexture(), []);
+    const textureInstance = useMemo(() => {
+        const t = waterTexture.clone();
+        // Vertically repeat based on height to prevent stretching
+        t.repeat.set(1, height * 0.5); // 0.5 multiplier to stretch it a bit, but not too much
+        return t;
+    }, [waterTexture, height]);
+
+    useFrame((state, delta) => {
+        textureInstance.offset.y -= 1.5 * delta;
+    });
+
     return (
         <group position={position}>
-            {/* The main water column */}
-            {/* Positioned so the 'position' prop is the top center of the waterfall */}
             <mesh position={[0, -height/2, 0]}>
-                <boxGeometry args={[0.7, height, 0.7]} />
+                <boxGeometry args={[0.68, height, 0.68]} />
                 <meshStandardMaterial 
-                    color={color} 
-                    emissive={color} 
-                    emissiveIntensity={0.6} 
-                    transparent 
-                    opacity={0.85} 
+                    color="white"
+                    emissive={PALETTE.waterfall} 
+                    emissiveIntensity={0.7} 
+                    map={textureInstance}
                 />
             </mesh>
             
-            {/* Splash ring at the bottom */}
             <mesh position={[0, -height + 0.1, 0]} rotation={[-Math.PI/2, 0, 0]}>
                 <ringGeometry args={[0.4, 0.7, 16]} />
                 <meshBasicMaterial color="white" transparent opacity={0.4} side={THREE.DoubleSide} />
@@ -359,10 +386,6 @@ export const WaterfallBlock: React.FC<BlockProps & { height?: number }> = ({
     );
 };
 
-/**
- * PillarBlock
- * Long vertical support.
- */
 export const PillarBlock: React.FC<BlockProps & { height?: number }> = ({ 
   position, 
   color = PALETTE.shadow,
@@ -376,13 +399,9 @@ export const PillarBlock: React.FC<BlockProps & { height?: number }> = ({
     );
 };
 
-/**
- * TowerBlock
- * Cylindrical minaret body.
- */
-export const TowerBlock: React.FC<BlockProps & { hasDoor?: boolean }> = ({ position, color = PALETTE.brick, scale=[1,1,1], hasDoor = false }) => {
+export const TowerBlock: React.FC<BlockProps & { hasDoor?: boolean }> = ({ position, color = PALETTE.brick, scale=[1,1,1], rotation=[0,0,0], hasDoor = false }) => {
     return (
-        <group position={position} scale={scale}>
+        <group position={position} scale={scale} rotation={rotation}>
             <mesh castShadow receiveShadow>
                 <cylinderGeometry args={[0.4, 0.4, UNIT, 16]} />
                 <meshStandardMaterial color={color} flatShading />
@@ -397,10 +416,6 @@ export const TowerBlock: React.FC<BlockProps & { hasDoor?: boolean }> = ({ posit
     );
 };
 
-/**
- * DomeCap
- * The minaret roof.
- */
 export const DomeCap: React.FC<BlockProps> = ({ position, color = PALETTE.brickDark }) => {
     return (
       <group position={position}>
@@ -416,10 +431,6 @@ export const DomeCap: React.FC<BlockProps> = ({ position, color = PALETTE.brickD
     );
 };
 
-/**
- * ArchBlock
- * A decorative doorway structure.
- */
 export const ArchBlock: React.FC<BlockProps> = ({ position, color = PALETTE.brick, rotation=[0,0,0] }) => {
   return (
     <group position={position} rotation={rotation}>
@@ -443,9 +454,6 @@ export const ArchBlock: React.FC<BlockProps> = ({ position, color = PALETTE.bric
   );
 };
 
-/**
- * Character (Princess Ida / Totem)
- */
 export const Character: React.FC<{ position: [number, number, number], color?: string, type?: 'ida' | 'totem' }> = ({ 
     position, 
     color = PALETTE.character,

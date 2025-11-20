@@ -1,4 +1,4 @@
-import React, { useLayoutEffect, useState } from 'react';
+import React, { useLayoutEffect, useState, useMemo } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
 import { OrthographicCamera, OrbitControls } from '@react-three/drei';
 import { LevelOne } from './LevelOne';
@@ -30,9 +30,27 @@ interface EnginePreviewProps {
 export const EnginePreview: React.FC<EnginePreviewProps> = ({ showOverlay = false }) => {
   const [isLocked, setIsLocked] = useState(true);
 
+  // GPU Capability Heuristic
+  // Check if the device has high pixel ratio (Retina) or decent CPU core count as proxy for GPU power
+  const isHighPerf = useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    const pixelRatio = window.devicePixelRatio || 1;
+    const cores = navigator.hardwareConcurrency || 2;
+    return pixelRatio > 1 || cores >= 4;
+  }, []);
+
   return (
     <div className="w-full h-full absolute top-0 left-0" style={{ background: `linear-gradient(to bottom, #2a2a2a, ${PALETTE.background})` }}>
-      <Canvas shadows dpr={[1, 2]}>
+      <Canvas 
+        shadows 
+        dpr={isHighPerf ? [1, 2] : 1}
+        gl={{ 
+          powerPreference: isHighPerf ? "high-performance" : "default",
+          antialias: true,
+          stencil: false,
+          depth: true 
+        }}
+      >
         
         {/* Camera Configuration */}
         <OrthographicCamera 
@@ -104,10 +122,18 @@ export const EnginePreview: React.FC<EnginePreviewProps> = ({ showOverlay = fals
          </button>
       </div>
 
-      <div className="absolute bottom-8 right-8 pointer-events-none z-40">
+      <div className="absolute bottom-8 right-8 pointer-events-none z-40 flex flex-col items-end space-y-2">
         <div className="bg-black/60 backdrop-blur px-4 py-2 rounded-lg border border-white/10">
             <p className="text-xs font-mono text-mv-accent">ENGINE: ACTIVE</p>
             <p className="text-[10px] font-mono text-gray-400">Cam: {isLocked ? 'Iso Rig (Locked)' : 'Free Orbit'}</p>
+        </div>
+        
+        {/* GPU Status Indicator */}
+        <div className="bg-black/60 backdrop-blur px-3 py-1 rounded-lg border border-white/5 flex items-center space-x-2">
+            <div className={`w-1.5 h-1.5 rounded-full ${isHighPerf ? 'bg-green-400 shadow-[0_0_5px_rgba(74,222,128,0.5)]' : 'bg-yellow-500'}`} />
+            <span className="text-[9px] font-mono text-gray-400 uppercase">
+                GPU: {isHighPerf ? 'High Perf' : 'Standard'}
+            </span>
         </div>
       </div>
     </div>
