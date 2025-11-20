@@ -9,18 +9,23 @@ import { LevelSelect } from './components/UI/LevelSelect';
 const App: React.FC = () => {
   // State
   const [showIntro, setShowIntro] = useState(true);
+  const [isExiting, setIsExiting] = useState(false);
   const [showLevelSelect, setShowLevelSelect] = useState(false);
   const [mode, setMode] = useState<ViewMode>('research');
 
   const handleStart = () => {
-    setShowIntro(false);
+    setIsExiting(true);
+    // Remove intro screen after animation completes
+    setTimeout(() => {
+      setShowIntro(false);
+    }, 1200);
   };
 
   return (
     <div className="relative w-full h-screen overflow-hidden bg-[#1a1a1a]">
       
       {/* Intro Overlay */}
-      {showIntro && <IntroScreen onStart={handleStart} />}
+      {showIntro && <IntroScreen onStart={handleStart} isExiting={isExiting} />}
 
       {/* Level Select Overlay */}
       <LevelSelect isOpen={showLevelSelect} onClose={() => setShowLevelSelect(false)} />
